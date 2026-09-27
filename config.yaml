@@ -74,11 +74,11 @@ sources:
     weight: 2
     model: ncep_nbm_conus
 
-  # NBM thunderstorm probability (1/3/6 h periods), highest value within 30 and 10 nm.
-  # Feeds the lightning rows only.
+  # NBM probabilities: thunderstorm (1/3/6 h periods, highest value within 30 and 10 nm)
+  # for the lightning rows, and visibility below NBM's lowest threshold for the visibility row.
   - id: nbm_tstm
     kind: nbm_prob
-    label: NBM thunder probability
+    label: NBM thunder and visibility probability
     family: blend
     weight: 2
     base: https://noaa-nbm-grib2-pds.s3.amazonaws.com

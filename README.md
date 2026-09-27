@@ -1,7 +1,7 @@
 # 7-Day Constraint Probabilities
 
 Hourly-updated chance of each 7-Day product constraint (precip within 30 nm,
-lightning within 30/10 nm, crosswinds, head/tailwinds, RH > 98 %, plus
+lightning within 30/10 nm, crosswinds, head/tailwinds, visibility, RH > 98 %, plus
 high/low) for every local window, built from HRRR, the HREF member models,
 NAM 3 km, NBM, NDFD and the ECMWF, AIFS, GEFS, ICON and GEM ensembles.
 The page exports a CSV that the OTV 7-Day workbook imports.
@@ -36,8 +36,9 @@ checked constraint. The window is saved in the page link, so it can be shared.
 A member counts toward "any" if it can judge every checked non-lightning
 constraint;
 sources that can't are listed under the result. Lightning rows only use
-models with explicit lightning output (hi-res LTNG, NBM thunder probability),
-so "any" is never below the checked lightning rows.
+models with explicit lightning output (hi-res LTNG, NBM thunder probability)
+and visibility only uses NBM's probability below its lowest threshold, so "any"
+is never below those rows when they are checked.
 
 ## Change limits or sources
 
