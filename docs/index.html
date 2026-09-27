@@ -1,0 +1,487 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>7-Day Constraint Probabilities</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛬</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #e9edf1; --panel: #ffffff; --ink: #16202b; --muted: #5b6875; --rule: #d3dae1;
+  --slight: #3a9a5b; --marginal: #e7b416; --severe: #cc3d31;
+  --hires: #1d6fb8; --blend: #8a4fbf; --global: #7a8896; --line: #16202b;
+  --font: "Barlow Semi Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f151c; --panel: #17202a; --ink: #e4e9ee; --muted: #93a1ae; --rule: #2a3642;
+    --slight: #3fae63; --marginal: #f0c23a; --severe: #e2574b;
+    --hires: #4b9be0; --blend: #b27be3; --global: #8795a3; --line: #f3f6f8;
+    color-scheme: dark;
+  }
+}
+:root { box-sizing: border-box; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+*, *::before, *::after { box-sizing: inherit; }
+html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font); font-size: 15px;
+  line-height: 1.4; font-variant-numeric: tabular-nums; }
+button, input, select { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--hires); outline-offset: 2px; }
+
+.top { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px 28px; padding: 18px 20px 14px; border-bottom: 1px solid var(--rule); }
+h1 { margin: 0; font-size: 30px; font-weight: 700; letter-spacing: -0.01em; line-height: 1; }
+.where { color: var(--muted); margin-top: 6px; }
+.fresh { margin-left: auto; text-align: right; }
+.fresh b { font-weight: 600; }
+.fresh.stale b { color: var(--severe); }
+.actions { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; padding: 12px 20px; border-bottom: 1px solid var(--rule); }
+.btn { background: var(--ink); color: var(--panel); border: 0; border-radius: 4px; padding: 7px 14px; font-weight: 600; cursor: pointer; }
+.btn.ghost { background: var(--panel); color: var(--ink); border: 1px solid var(--rule); font-weight: 500; }
+.hint { color: var(--muted); }
+.banner { margin: 12px 20px 0; padding: 8px 12px; border-left: 4px solid var(--marginal); background: var(--panel); }
+.banner.bad { border-color: var(--severe); }
+
+.wrap { padding: 16px 20px 0; display: flex; flex-direction: column; gap: 18px; }
+.card { background: var(--panel); border: 1px solid var(--rule); border-radius: 6px; padding: 12px 14px; min-width: 0; }
+.card h2 { margin: 0 0 8px; font-size: 17px; font-weight: 600; }
+.grid-scroll { overflow-x: auto; }
+table.g { border-collapse: separate; border-spacing: 2px; font-size: 14px; min-width: 100%; }
+table.g th { font-weight: 600; padding: 3px 4px; white-space: nowrap; text-align: center; }
+table.g th.day { border-bottom: 2px solid var(--ink); }
+table.g th.day small { display: block; font-weight: 400; color: var(--muted); }
+table.g th.today { background: color-mix(in srgb, var(--hires) 14%, transparent); }
+table.g td { text-align: center; padding: 7px 4px; border-radius: 3px; min-width: 42px; }
+table.g td.rowh { text-align: left; font-weight: 600; white-space: nowrap; padding-right: 10px; position: sticky; left: 0; background: var(--panel); z-index: 1; }
+table.g td.rowh small { display: block; font-weight: 400; color: var(--muted); }
+table.g td.p { cursor: pointer; font-weight: 600; }
+table.g td.p:hover, table.g td.p.sel { outline: 2px solid var(--ink); outline-offset: -2px; }
+td.s { background: color-mix(in srgb, var(--slight) 75%, var(--panel)); color: #fff; }
+td.m { background: color-mix(in srgb, var(--marginal) 85%, var(--panel)); color: #1b1300; }
+td.v { background: color-mix(in srgb, var(--severe) 82%, var(--panel)); color: #fff; }
+td.na { color: var(--muted); background: color-mix(in srgb, var(--rule) 40%, var(--panel)); }
+td.temp { background: color-mix(in srgb, var(--rule) 40%, var(--panel)); }
+td.past { opacity: .45; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; color: var(--muted); font-size: 13px; margin-top: 8px; }
+.legend i { display: inline-block; width: 12px; height: 12px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+
+.two { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 18px; }
+@media (max-width: 1000px) { .two { grid-template-columns: minmax(0, 1fr); } }
+.seg { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--rule); border-radius: 4px; overflow: hidden; margin-bottom: 8px; }
+.seg button { background: var(--panel); border: 0; padding: 4px 10px; cursor: pointer; border-right: 1px solid var(--rule); }
+.seg button:last-child { border-right: 0; }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--panel); }
+canvas { display: block; width: 100%; }
+.detail .big { font-size: 34px; font-weight: 700; line-height: 1; }
+.detail .sub { color: var(--muted); margin-bottom: 8px; }
+.bysrc { width: 100%; border-collapse: collapse; font-size: 14px; }
+.bysrc td { padding: 3px 0; }
+.bysrc td.v2 { text-align: right; width: 70px; color: var(--muted); }
+.bar { height: 8px; border-radius: 4px; background: var(--rule); position: relative; overflow: hidden; }
+.bar i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--ink); }
+
+.fams { display: flex; flex-wrap: wrap; gap: 6px 16px; padding-bottom: 10px; margin-bottom: 4px; border-bottom: 1px solid var(--rule); }
+.fams label { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; cursor: pointer; }
+.dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; }
+.srclist { list-style: none; margin: 0; padding: 0; }
+.srclist li { display: grid; grid-template-columns: 22px 1fr auto; gap: 2px 6px; padding: 6px 0; border-top: 1px solid var(--rule); }
+.srclist li:first-child { border-top: 0; }
+.srclist .nm { font-weight: 500; }
+.srclist .nm .dot { margin-right: 6px; }
+.srclist .meta { grid-column: 2 / 4; color: var(--muted); font-size: 13px; }
+.chip { font-size: 12px; padding: 0 6px; border-radius: 9px; border: 1px solid var(--rule); color: var(--muted); align-self: start; }
+.chip.ok { color: var(--slight); border-color: currentColor; }
+.chip.partial { color: var(--marginal); border-color: currentColor; }
+.chip.error, .chip.missing { color: var(--severe); border-color: currentColor; }
+.method { color: var(--muted); font-size: 13px; max-width: 80ch; padding: 18px 20px 32px; }
+.method p { margin: 0 0 6px; }
+.method b { color: var(--ink); font-weight: 600; }
+</style>
+</head>
+<body>
+<header class="top">
+  <div>
+    <h1>7-Day Constraint Probabilities</h1>
+    <div class="where" id="where">Loading…</div>
+  </div>
+  <div class="fresh" id="fresh"></div>
+</header>
+<div class="actions">
+  <button class="btn" id="dl" type="button">Download CSV for Excel</button>
+  <button class="btn ghost" id="copy" type="button">Copy published CSV link</button>
+  <span class="hint" id="dlhint">The CSV uses the sources switched on below.</span>
+</div>
+<div id="banners"></div>
+
+<main class="wrap">
+  <section class="card">
+    <h2>Chance of each constraint during the window</h2>
+    <div class="grid-scroll"><table class="g" id="grid"></table></div>
+    <div class="legend">
+      <span><i style="background:var(--slight)"></i>Slight, under 20%</span>
+      <span><i style="background:var(--marginal)"></i>Marginal, 20–50%</span>
+      <span><i style="background:var(--severe)"></i>Significant, over 50%</span>
+      <span>Select a cell for the source breakdown</span>
+    </div>
+  </section>
+
+  <div class="two">
+    <section class="card">
+      <h2 id="chartTitle">Hourly chance</h2>
+      <div class="seg" id="consSeg" role="group" aria-label="Constraint"></div>
+      <canvas id="chart"></canvas>
+      <div class="legend" id="chartLegend"></div>
+    </section>
+    <aside style="display:flex;flex-direction:column;gap:18px;min-width:0">
+      <section class="card detail" id="detail"></section>
+      <section class="card">
+        <h2>Sources</h2>
+        <div class="fams" id="fams"></div>
+        <ul class="srclist" id="srclist"></ul>
+      </section>
+    </aside>
+  </div>
+</main>
+
+<section class="method">
+  <p><b>Window chance.</b> A member counts as a hit if any hour it has inside the window breaks the limit. Each source's chance is its share of hits; sources are weight-averaged and the result is rounded to the nearest 5%. A member only counts if it covers at least half of the window.</p>
+  <p><b>Winds</b> use the 10 m gust with runway 15/33 at 330° true: crosswind is gust × |sin(angle)| over 10 kt, head/tail is |gust × cos(angle)| over 15 kt. <b>Precip within 30 nm</b> is 1 km reflectivity of 20 dBZ or more anywhere within 30 nm for HRRR, HREF members and NAM, and 0.01 in/hr at any of 13 sample points out to 25 nm for NBM and the global ensembles. <b>Lightning</b> uses each hi-res model's lightning field within 30 and 10 nm where the model provides one, composite reflectivity of 40 dBZ or more where it doesn't, and precip together with CAPE of 500 J/kg or more at the same point for NBM and the global ensembles. <b>Visibility under 200 ft</b> has no model guidance and is left blank. <b>High/Low</b> are the weighted median of members' 11–18L maximum and 00–11L minimum.</p>
+</section>
+
+<script>
+(() => {
+"use strict";
+const DATA_URL = "data/board.json", CSV_URL = "data/constraints.csv";
+const REFRESH_MS = 10 * 60 * 1000, STALE_MIN = 90;
+const ROWS = [
+  { col: "precip30", v: "p30", name: "Precipitation", sub: "within 30 nm" },
+  { col: "ltng30", v: "l30", name: "Lightning", sub: "within 30 nm" },
+  { col: "ltng10", v: "l10", name: "Lightning potential", sub: "within 10 nm" },
+  { col: "xwind", v: "xw", name: "Crosswinds", sub: "> 10 kt" },
+  { col: "headtail", v: "ht", name: "Head/Tailwinds", sub: "> 15 kt" },
+  { col: "vis200", v: null, name: "Visibility", sub: "< 200 ft" },
+  { col: "rh98", v: "rhx", name: "Relative humidity", sub: "> 98%" },
+];
+const FAMS = [["hires", "All hi-res"], ["blend", "All blends"], ["global", "All global ens"]];
+const $ = s => document.querySelector(s);
+const state = { data: null, enabled: {}, rows: [], sel: null, cons: "p30", hourly: null };
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+  set(k, v) { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch {} }
+};
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+function alpha(hex, a) { const n = parseInt(hex.replace("#", ""), 16); return `rgba(${n >> 16 & 255},${n >> 8 & 255},${n & 255},${a})`; }
+
+// ---------- time zone helpers
+let TZ = "America/New_York";
+function parts(ms) {
+  const f = new Intl.DateTimeFormat("en-US", { timeZone: TZ, hourCycle: "h23", year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", weekday: "short", timeZoneName: "short" });
+  return Object.fromEntries(f.formatToParts(new Date(ms)).map(p => [p.type, p.value]));
+}
+function zonedToUtc(y, mo, d, h) {
+  const want = Date.UTC(y, mo - 1, d, h); let g = want;
+  for (let k = 0; k < 3; k++) { const p = parts(g); g += want - Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute); }
+  return g;
+}
+
+// ---------- window math (mirror of pipeline/windows.py)
+function windowList(d) {
+  const p = parts(d.generated_unix * 1000);
+  const base = new Date(Date.UTC(+p.year, +p.month - 1, +p.day - 1));
+  const out = [];
+  for (let k = 0; k <= d.days; k++) {
+    const day = new Date(base.getTime() + k * 864e5), y = day.getUTCFullYear(), mo = day.getUTCMonth() + 1, dd = day.getUTCDate();
+    d.windows.forEach(([h0, h1], wi) => {
+      const a = zonedToUtc(y, mo, dd, h0) / 1000, b = zonedToUtc(y, mo, dd, 0) / 1000 + h1 * 3600;
+      const bb = h1 === 24 ? zonedToUtc(y, mo, dd + 1, 0) / 1000 : zonedToUtc(y, mo, dd, h1) / 1000;
+      const date = `${y}-${String(mo).padStart(2, "0")}-${String(dd).padStart(2, "0")}`;
+      out.push({ key: Number(`${y}${String(mo).padStart(2, "0")}${String(dd).padStart(2, "0")}${String(h0).padStart(2, "0")}`),
+        date, w: wi + 1, label: `${String(h0).padStart(2, "0")}-${String(h1).padStart(2, "0")}L`, a, b: bb });
+    });
+  }
+  return out;
+}
+function exceed(v, vals, i, C, rwy) {
+  if (v === "p30" || v === "l30" || v === "l10") { const a = vals[v]; return a == null || a[i] == null ? null : +(a[i] >= 1); }
+  if (v === "rhx") { const a = vals.rh; return a == null || a[i] == null ? null : +(a[i] > C.rh_pct); }
+  const g = vals.gst, d = vals.dir;
+  if (!g || !d || g[i] == null || d[i] == null) return null;
+  const r = (d[i] - rwy) * Math.PI / 180;
+  return v === "xw" ? +(g[i] * Math.abs(Math.sin(r)) > C.crosswind_kt) : +(Math.abs(g[i] * Math.cos(r)) > C.headtail_kt);
+}
+const baseVar = v => v === "xw" || v === "ht" ? "gst" : v === "rhx" ? "rh" : v;
+function stepHours(times, arr) {
+  const idx = []; arr.forEach((x, i) => { if (x != null) idx.push(times[i]); });
+  if (idx.length < 2) return 1;
+  const gaps = idx.slice(1).map((t, i) => (t - idx[i]) / 3600).sort((a, b) => a - b);
+  return Math.min(6, Math.max(1, gaps[Math.floor(gaps.length / 2)]));
+}
+function wmedian(pairs) {
+  if (!pairs.length) return null;
+  pairs.sort((a, b) => a[0] - b[0]); const tot = pairs.reduce((s, p) => s + p[1], 0); let c = 0;
+  for (const [v, w] of pairs) { c += w; if (c >= tot / 2 - 1e-9) return v; }
+  return pairs[pairs.length - 1][0];
+}
+function prepSteps(d) {
+  for (const s of d.sources) for (const m of s.members) {
+    m.step = {};
+    for (const v of ["gst", "rh", "p30", "l30", "l10", "t"]) m.step[v] = m.v[v] ? stepHours(d.times, m.v[v]) : 1;
+  }
+}
+function windowTable() {
+  const d = state.data, C = d.constraints, rwy = d.runway_heading_true, cov = d.min_window_coverage ?? 0.5;
+  const tindex = new Map(d.times.map((t, i) => [t, i]));
+  const srcs = d.sources.filter(s => s.members.length && state.enabled[s.id]);
+  return windowList(d).map(W => {
+    const hours = []; for (let t = W.a; t < W.b; t += 3600) if (tindex.has(t)) hours.push(tindex.get(t));
+    const nh = (W.b - W.a) / 3600, row = { ...W, per: {}, used: new Set() };
+    for (const R of ROWS) {
+      if (!R.v) { row[R.col] = null; continue; }
+      let num = 0, den = 0; const per = {};
+      for (const s of srcs) {
+        let hit = 0, n = 0;
+        for (const m of s.members) {
+          const vals = hours.map(i => exceed(R.v, m.v, i, C, rwy)).filter(x => x != null);
+          const need = Math.max(1, Math.floor(cov * nh / m.step[baseVar(R.v)]));
+          if (vals.length >= need) { n++; hit += Math.max(...vals); }
+        }
+        if (n) { num += s.weight * hit / n; den += s.weight; per[s.id] = { p: hit / n, n }; row.used.add(s.id); }
+      }
+      row[R.col] = den ? Math.round(100 * num / den / 5) * 5 : null;
+      row.per[R.col] = per;
+    }
+    for (const [col, want, fn] of [["low_f", 1, Math.min], ["high_f", 2, Math.max]]) {
+      row[col] = null; if (W.w !== want) continue;
+      const pairs = [];
+      for (const s of srcs) {
+        const vm = [];
+        for (const m of s.members) {
+          const t = m.v.t; if (!t) continue;
+          const v = hours.map(i => t[i]).filter(x => x != null);
+          if (v.length >= Math.max(1, Math.floor(cov * nh / m.step.t))) vm.push(fn(...v));
+        }
+        vm.forEach(v => pairs.push([v, s.weight / vm.length]));
+      }
+      const med = wmedian(pairs); row[col] = med == null ? null : Math.round(med);
+    }
+    row.sources = row.used.size;
+    return row;
+  });
+}
+
+// ---------- CSV
+function toCSV(rows) {
+  const d = state.data;
+  const head = ["key", "local_date", "window", "window_label", "local_start", "precip30", "ltng30", "ltng10", "xwind", "headtail", "vis200", "rh98", "low_f", "high_f", "sources", "generated_utc"];
+  const lines = [head.join(",")];
+  for (const r of rows) {
+    const p = parts(r.a * 1000);
+    lines.push([r.key, r.date, r.w, r.label, `${p.year}-${p.month}-${p.day} ${p.hour}:${p.minute}`,
+      ...["precip30", "ltng30", "ltng10", "xwind", "headtail", "vis200", "rh98", "low_f", "high_f"].map(c => r[c] ?? ""),
+      r.sources, d.generated].join(","));
+  }
+  return lines.join("\r\n") + "\r\n";
+}
+function download() {
+  const blob = new Blob([toCSV(state.rows)], { type: "text/csv" });
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "Constraint_Plume.csv";
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+
+// ---------- grid
+const cls = v => v == null ? "na" : v < 20 ? "s" : v <= 50 ? "m" : "v";
+function grid() {
+  const rows = state.rows, now = Date.now() / 1000, todayKey = parts(Date.now()).year + parts(Date.now()).month + parts(Date.now()).day;
+  const days = []; rows.forEach(r => { if (r.w === 1) days.push(r.date); });
+  let h = "<thead><tr><th></th>";
+  for (const d of days) {
+    const [y, m, dd] = d.split("-"), wd = new Date(Date.UTC(+y, +m - 1, +dd)).toLocaleDateString("en-US", { weekday: "long", timeZone: "UTC" });
+    const today = d.replaceAll("-", "") === todayKey;
+    h += `<th colspan="3" class="day${today ? " today" : ""}">${wd}<small>${+m}/${+dd}${today ? ", today" : ""}</small></th>`;
+  }
+  h += "</tr><tr><th></th>" + rows.map(r => `<th>${r.label}</th>`).join("") + "</tr></thead><tbody>";
+  h += `<tr><td class="rowh">High/Low<small>°F</small></td>` + rows.map(r => {
+    const v = r.w === 1 ? r.low_f : r.w === 2 ? r.high_f : null;
+    return `<td class="temp${r.b <= now ? " past" : ""}">${v ?? (r.w === 3 ? "" : "–")}</td>`;
+  }).join("") + "</tr>";
+  for (const R of ROWS) {
+    h += `<tr><td class="rowh">${R.name}<small>${R.sub}</small></td>`;
+    rows.forEach((r, i) => {
+      const v = r[R.col], past = r.b <= now ? " past" : "";
+      const sel = state.sel && state.sel.i === i && state.sel.col === R.col ? " sel" : "";
+      h += R.v ? `<td class="p ${cls(v)}${past}${sel}" data-i="${i}" data-col="${R.col}" tabindex="0">${v == null ? "–" : v + "%"}</td>`
+               : `<td class="na${past}">–</td>`;
+    });
+    h += "</tr>";
+  }
+  $("#grid").innerHTML = h + "</tbody>";
+  $("#grid").querySelectorAll("td.p").forEach(td => {
+    const pick = () => { state.sel = { i: +td.dataset.i, col: td.dataset.col }; state.cons = ROWS.find(R => R.col === td.dataset.col).v; grid(); detail(); segs(); chart(); };
+    td.addEventListener("click", pick);
+    td.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(); } });
+  });
+  if (!state.scrolled) {
+    const t = $("#grid").querySelector("th.today");
+    if (t) $(".grid-scroll").scrollLeft = Math.max(0, t.offsetLeft - 160);
+    state.scrolled = true;
+  }
+}
+function detail() {
+  const el = $("#detail"), d = state.data;
+  if (!state.sel) { el.innerHTML = `<h2>Source breakdown</h2><p class="sub">Select a cell in the table to see how each source contributes.</p>`; return; }
+  const r = state.rows[state.sel.i], R = ROWS.find(x => x.col === state.sel.col), per = r.per[R.col] || {};
+  const [y, m, dd] = r.date.split("-");
+  let h = `<h2>${R.name} ${R.sub}</h2><div class="sub">${+m}/${+dd}, ${r.label}</div><div class="big">${r[R.col] == null ? "–" : r[R.col] + "%"}</div><div class="sub">weighted across ${Object.keys(per).length} sources</div><table class="bysrc">`;
+  for (const s of d.sources) {
+    const p = per[s.id]; if (!p) continue;
+    h += `<tr><td>${s.label}</td><td style="width:40%"><div class="bar"><i style="width:${p.p * 100}%;background:${css("--" + s.family)}"></i></div></td><td class="v2">${Math.round(p.p * 100)}% of ${p.n}</td></tr>`;
+  }
+  el.innerHTML = h + "</table>";
+}
+
+// ---------- hourly chart
+function hourlyStats(v) {
+  const d = state.data, C = d.constraints, rwy = d.runway_heading_true, T = d.times.length;
+  const fam = {}, all = new Array(T).fill(null);
+  for (const [f] of FAMS) fam[f] = new Array(T).fill(null);
+  for (let i = 0; i < T; i++) {
+    let num = 0, den = 0; const fn = {}, fd = {};
+    for (const s of d.sources) {
+      if (!state.enabled[s.id] || !s.members.length) continue;
+      let hit = 0, n = 0;
+      for (const m of s.members) { const x = exceed(v, m.v, i, C, rwy); if (x != null) { n++; hit += x; } }
+      if (!n) continue;
+      num += s.weight * hit / n; den += s.weight;
+      fn[s.family] = (fn[s.family] || 0) + s.weight * hit / n; fd[s.family] = (fd[s.family] || 0) + s.weight;
+    }
+    if (den) all[i] = num / den;
+    for (const f in fd) fam[f][i] = fn[f] / fd[f];
+  }
+  return { all, fam };
+}
+function segs() {
+  $("#consSeg").innerHTML = ROWS.filter(R => R.v).map(R => `<button type="button" data-v="${R.v}" aria-pressed="${R.v === state.cons}">${R.name} ${R.sub}</button>`).join("");
+  $("#consSeg").querySelectorAll("button").forEach(b => b.addEventListener("click", () => { state.cons = b.dataset.v; segs(); chart(); }));
+}
+function chart() {
+  const cv = $("#chart"), d = state.data, T = d.times;
+  const R = ROWS.find(x => x.v === state.cons);
+  $("#chartTitle").textContent = `Hourly chance: ${R.name.toLowerCase()} ${R.sub}`;
+  const w = cv.parentElement.clientWidth - 28, h = 260, dpr = window.devicePixelRatio || 1;
+  cv.width = w * dpr; cv.height = h * dpr; cv.style.width = w + "px"; cv.style.height = h + "px";
+  const g = cv.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const L = 40, Rm = 8, top = 10, bot = 24, n = T.length - 1;
+  const x = i => L + (w - L - Rm) * i / n, y = v => top + (h - top - bot) * (1 - v);
+  const font = `12px ${css("--font")}`; g.font = font;
+  // window bands every other day
+  const rows = state.rows;
+  rows.forEach((r, k) => {
+    if (r.w !== 1) return;
+    const dayIdx = Math.floor(k / 3); if (dayIdx % 2) return;
+    const a = T.findIndex(t => t >= r.a), last = rows[k + 2] ? rows[k + 2].b : r.b;
+    let b = T.findIndex(t => t >= last); if (b < 0) b = n;
+    if (a < 0) return;
+    g.fillStyle = alpha(css("--rule"), .35); g.fillRect(x(a), top, x(b) - x(a), h - top - bot);
+  });
+  g.textAlign = "right"; g.textBaseline = "middle";
+  for (const v of [0, .2, .5, 1]) {
+    g.strokeStyle = v === .2 || v === .5 ? alpha(v === .2 ? css("--marginal") : css("--severe"), .8) : css("--rule");
+    g.setLineDash(v === .2 || v === .5 ? [4, 3] : []); g.beginPath(); g.moveTo(L, y(v)); g.lineTo(w - Rm, y(v)); g.stroke(); g.setLineDash([]);
+    g.fillStyle = css("--muted"); g.fillText(Math.round(v * 100) + "%", L - 6, y(v));
+  }
+  g.textAlign = "center"; g.textBaseline = "top";
+  T.forEach((t, i) => { const p = parts(t * 1000); if (p.hour === "00") { g.fillStyle = css("--ink"); g.fillText(`${p.weekday} ${+p.day}`, x(i), h - bot + 5); } });
+  const nowI = T.findIndex(t => t * 1000 >= Date.now());
+  if (nowI > 0) { g.strokeStyle = css("--muted"); g.setLineDash([3, 3]); g.beginPath(); g.moveTo(x(nowI), top); g.lineTo(x(nowI), h - bot); g.stroke(); g.setLineDash([]); }
+  const st = hourlyStats(state.cons);
+  const line = (arr, color, width) => {
+    g.strokeStyle = color; g.lineWidth = width; g.beginPath(); let pen = false;
+    arr.forEach((v, i) => { if (v == null) { pen = false; return; } pen ? g.lineTo(x(i), y(v)) : g.moveTo(x(i), y(v)); pen = true; });
+    g.stroke(); g.lineWidth = 1;
+  };
+  for (const [f] of FAMS) line(st.fam[f], alpha(css("--" + f), .9), 1.3);
+  line(st.all, css("--line"), 2.4);
+  const names = { hires: "Hi-res", blend: "Blends", global: "Global ensembles" };
+  $("#chartLegend").innerHTML = `<span><i style="background:var(--line)"></i>All sources, weighted</span>` +
+    FAMS.filter(([f]) => st.fam[f].some(v => v != null)).map(([f]) => `<span><i style="background:var(--${f})"></i>${names[f]}</span>`).join("") +
+    `<span>Hourly values; window cells use any hour in the window, so they run higher.</span>`;
+}
+
+// ---------- sources
+function saveOff() { store.set("board.off", JSON.stringify(state.data.sources.filter(s => s.members.length && !state.enabled[s.id]).map(s => s.id))); }
+function famToggles() {
+  const d = state.data, el = $("#fams");
+  el.innerHTML = FAMS.map(([f, name]) => `<label><input type="checkbox" data-fam="${f}"><span class="dot" style="background:var(--${f})"></span>${name}</label>`).join("");
+  el.querySelectorAll("input").forEach(cb => {
+    const srcs = d.sources.filter(s => s.family === cb.dataset.fam && s.members.length);
+    const on = srcs.filter(s => state.enabled[s.id]).length;
+    cb.disabled = !srcs.length; cb.checked = srcs.length > 0 && on === srcs.length; cb.indeterminate = on > 0 && on < srcs.length;
+    cb.addEventListener("change", () => { for (const s of srcs) state.enabled[s.id] = cb.checked; saveOff(); recompute(); });
+  });
+}
+function sourceList() {
+  const d = state.data;
+  $("#srclist").innerHTML = d.sources.map(s => {
+    const has = s.members.length > 0;
+    return `<li><input type="checkbox" id="src-${s.id}" data-id="${s.id}" ${state.enabled[s.id] ? "checked" : ""} ${has ? "" : "disabled"}>
+      <label class="nm" for="src-${s.id}"><span class="dot" style="background:var(--${s.family})"></span>${s.label}</label>
+      <span class="chip ${s.status}">${s.status}</span>
+      <span class="meta">${has ? `${s.members.length} member${s.members.length > 1 ? "s" : ""}, weight ${s.weight}` : "no data"}${s.cycle ? `, ${s.cycle.replace("T", " ")}` : ""}${s.note ? `. ${s.note}` : ""}</span></li>`;
+  }).join("");
+  $("#srclist").querySelectorAll("input").forEach(cb => cb.addEventListener("change", () => { state.enabled[cb.dataset.id] = cb.checked; saveOff(); recompute(); }));
+  famToggles();
+}
+function recompute() {
+  state.rows = windowTable(); sourceList(); grid(); detail(); chart();
+  const all = state.data.sources.every(s => !s.members.length || state.enabled[s.id]);
+  $("#dlhint").textContent = all ? "All sources are on, so this matches the published CSV." : "Some sources are off; the download reflects your selection. The published CSV always uses every source.";
+}
+function header() {
+  const d = state.data, st = d.site;
+  $("#where").textContent = `${Math.abs(st.lat).toFixed(3)}°N, ${Math.abs(st.lon).toFixed(3)}°W, runway ${String(d.runway_heading_true).padStart(3, "0")}° true, windows in local time`;
+  const age = Math.max(0, Math.round((Date.now() / 1000 - d.generated_unix) / 60)), stale = age > STALE_MIN;
+  const ageTxt = age < 90 ? `${age} min ago` : `${(age / 60).toFixed(1)} h ago`;
+  $("#fresh").className = "fresh" + (stale ? " stale" : "");
+  $("#fresh").innerHTML = `Updated <b>${d.generated.slice(11, 16)}Z ${d.generated.slice(0, 10)}</b><br><span class="where">${ageTxt}</span>`;
+  let b = "";
+  if (d.demo) b += `<div class="banner">Demo data. The first scheduled run replaces this with live guidance.</div>`;
+  if (stale && !d.demo) b += `<div class="banner bad">Data is ${ageTxt.replace(" ago", "")} old. The hourly update may have failed; check the repository's Actions tab.</div>`;
+  const bad = d.sources.filter(s => ["error", "missing"].includes(s.status));
+  if (bad.length) b += `<div class="banner">No data this run from ${bad.map(s => s.label).join(", ")}.</div>`;
+  $("#banners").innerHTML = b;
+}
+
+async function load(first) {
+  let d;
+  try {
+    const r = await fetch(DATA_URL + "?t=" + Date.now(), { cache: "no-store" });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    d = await r.json();
+  } catch (e) {
+    if (first) $("#banners").innerHTML = `<div class="banner bad">Could not load ${DATA_URL} (${e.message}). The first pipeline run creates it.</div>`;
+    return;
+  }
+  if (!first && state.data && d.generated_unix === state.data.generated_unix) { header(); return; }
+  state.data = d; TZ = d.site.display_tz || TZ; prepSteps(d);
+  let off; try { off = new Set(JSON.parse(store.get("board.off") || "[]")); } catch { off = new Set(); }
+  for (const s of d.sources) if (!(s.id in state.enabled)) state.enabled[s.id] = s.members.length > 0 && !off.has(s.id);
+  header(); segs(); recompute();
+}
+$("#dl").addEventListener("click", download);
+window.boardCSV = () => toCSV(state.rows);   // used by tests and handy in the console
+$("#copy").addEventListener("click", async () => {
+  const url = new URL(CSV_URL, location.href).href;
+  try { await navigator.clipboard.writeText(url); $("#dlhint").textContent = "Copied: " + url; }
+  catch { $("#dlhint").textContent = url; }
+});
+let rt; window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => state.data && chart(), 150); });
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => state.data && recompute());
+load(true); setInterval(() => load(false), REFRESH_MS);
+})();
+</script>
+</body>
+</html>

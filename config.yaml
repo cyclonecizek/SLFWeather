@@ -1,0 +1,119 @@
+# 7-Day constraint board configuration.
+
+site:
+  lat: 28.6150
+  lon: -80.6945
+  display_tz: America/New_York
+
+# Local-time windows, same as the 7-Day product columns (00-11L, 11-18L, 18-24L).
+windows: [[0, 11], [11, 18], [18, 24]]
+days: 8
+
+runway_heading_true: 330
+
+constraints:
+  crosswind_kt: 10            # 10 m gust x |sin(dir - runway)| above this
+  headtail_kt: 15             # |10 m gust x cos(dir - runway)| above this (one runway end over its limit)
+  rh_pct: 98                  # 2 m RH above this
+  precip_radius_nm: 30
+  lightning_radii_nm: [30, 10]
+  # Hi-res GRIB models: precip = 1 km reflectivity >= this anywhere in the radius
+  precip_dbz: 20
+  # Hi-res lightning: LTNG (flashes/km2/5 min) above this anywhere in the radius;
+  # models without LTNG use composite reflectivity >= lightning_proxy_dbz instead.
+  ltng_threshold: 0.05
+  lightning_proxy_dbz: 40
+  # Global ensembles / NBM: precip >= this (in/hr) at any sample point in the radius;
+  # lightning proxy = that precip together with CAPE >= cape_jkg at the same point.
+  precip_in: 0.01
+  cape_jkg: 500
+
+# A member counts toward a window only if it has data for at least this share
+# of the window's hours (relative to its own output interval).
+min_window_coverage: 0.5
+
+# Open-Meteo sources are refreshed at most this often (global runs are 6-hourly;
+# this keeps well inside the free-tier call limit).
+openmeteo_refresh_hours: 3
+
+sources:
+  - id: hrrr
+    kind: tle
+    label: HRRR time-lagged
+    family: hires
+    weight: 3
+    base: https://noaa-hrrr-bdp-pds.s3.amazonaws.com
+    file: "hrrr.{ymd}/conus/hrrr.t{hh}z.wrfsfcf{fh:02d}.grib2"
+    lag_cycles: 6
+    synoptic_extra: 2
+    short_fh: 18
+    long_fh: 48
+
+  # HREF v3 membership rebuilt from the member models (legacy; retires with RRFS/REFS).
+  - id: href
+    kind: multi_model
+    label: HREF members
+    family: hires
+    weight: 3
+    components:
+      - {id: ARW,  base: "https://nomads.ncep.noaa.gov/pub/data/nccf/com/hiresw/prod", file: "hiresw.{ymd}/hiresw.t{hh}z.arw_2p5km.f{fh:02d}.conus.grib2",     cycles: [0, 12], lag: 2, max_fh: 48}
+      - {id: ARW2, base: "https://nomads.ncep.noaa.gov/pub/data/nccf/com/hiresw/prod", file: "hiresw.{ymd}/hiresw.t{hh}z.arw_2p5km.f{fh:02d}.conusmem2.grib2", cycles: [0, 12], lag: 2, max_fh: 48}
+      - {id: FV3,  base: "https://nomads.ncep.noaa.gov/pub/data/nccf/com/hiresw/prod", file: "hiresw.{ymd}/hiresw.t{hh}z.fv3_2p5km.f{fh:02d}.conus.grib2",     cycles: [0, 12], lag: 2, max_fh: 48}
+      - {id: NAM3k, base: "https://nomads.ncep.noaa.gov/pub/data/nccf/com/nam/prod",   file: "nam.{ymd}/nam.t{hh}z.conusnest.hiresf{fh:02d}.tm00.grib2",       cycles: [0, 6, 12, 18], lag: 2, max_fh: 60}
+      - {id: HRRR, base: "https://noaa-hrrr-bdp-pds.s3.amazonaws.com",                  file: "hrrr.{ymd}/conus/hrrr.t{hh}z.wrfsfcf{fh:02d}.grib2",             cycles: [0, 6, 12, 18], lag: 2, max_fh: 48}
+
+  - id: nam3k
+    kind: multi_model
+    label: NAM 3 km
+    family: hires
+    weight: 2
+    components:
+      - {id: NAM3k, base: "https://nomads.ncep.noaa.gov/pub/data/nccf/com/nam/prod", file: "nam.{ymd}/nam.t{hh}z.conusnest.hiresf{fh:02d}.tm00.grib2", cycles: [0, 6, 12, 18], lag: 4, max_fh: 60}
+
+  - id: nbm
+    kind: openmeteo_det
+    label: NBM
+    family: blend
+    weight: 2
+    model: ncep_nbm_conus
+
+  - id: ndfd
+    kind: nws_grid
+    label: NDFD
+    family: blend
+    weight: 1
+
+  - id: ecmwf_ens
+    kind: openmeteo_ens
+    label: ECMWF ENS
+    family: global
+    weight: 2
+    model: ecmwf_ifs025
+
+  - id: aifs_ens
+    kind: openmeteo_ens
+    label: ECMWF AIFS ENS
+    family: global
+    weight: 1
+    model: ecmwf_aifs025
+
+  - id: gefs
+    kind: openmeteo_ens
+    label: GEFS
+    family: global
+    weight: 1
+    model: gfs025
+
+  - id: icon_eps
+    kind: openmeteo_ens
+    label: ICON EPS
+    family: global
+    weight: 1
+    model: icon_seamless
+
+  - id: gem_eps
+    kind: openmeteo_ens
+    label: GEM EPS
+    family: global
+    weight: 1
+    model: gem_global
