@@ -19,7 +19,7 @@ ENS_URL = "https://ensemble-api.open-meteo.com/v1/ensemble"
 DET_URL = "https://api.open-meteo.com/v1/forecast"
 VARS = ["wind_speed_10m", "wind_direction_10m", "wind_gusts_10m", "relative_humidity_2m",
         "temperature_2m", "precipitation"]
-_KEY = re.compile(r"^(" + "|".join(VARS) + r")(?:_member(\d+))?$")
+_KEY = re.compile(r"^(" + "|".join(VARS + ["visibility"]) + r")(?:_member(\d+))?$")
 
 
 def ring_points(lat, lon):
@@ -35,6 +35,7 @@ def ring_points(lat, lon):
 
 
 def _params(model, ctx, pts, variables):
+    variables = list(variables)
     days = max(1, math.ceil((ctx.t_end - ctx.now) / 86400) + 1)
     return {
         "latitude": ",".join(str(p[0]) for p in pts), "longitude": ",".join(str(p[1]) for p in pts),
@@ -44,8 +45,8 @@ def _params(model, ctx, pts, variables):
     }
 
 
-def _fetch(url, model, ctx, pts):
-    variables = list(VARS)
+def _fetch(url, model, ctx, pts, extra=()):
+    variables = list(VARS) + list(extra)
     for drop in (None, "wind_gusts_10m"):
         if drop:
             variables.remove(drop)
@@ -58,10 +59,24 @@ def _fetch(url, model, ctx, pts):
     return js if isinstance(js, list) else [js]
 
 
+def _vis_m(x, unit):
+    if x is None:
+        return None
+    u = (unit or "m").lower()
+    if u in ("ft", "feet"):
+        return x * 0.3048
+    if u in ("km",):
+        return x * 1000
+    if u in ("mi", "mile", "miles"):
+        return x * 1609.344
+    return x
+
+
 def _members(locs, pts, ctx):
     c = ctx.cons
     near30 = [i for i, p in enumerate(pts) if p[2] <= c["precip_radius_nm"]]
     times = locs[0]["hourly"]["time"]
+    vis_unit = locs[0].get("hourly_units", {}).get("visibility", "m")
     per: dict[str, dict] = {}                  # member -> var -> [loc arrays]
     for li, loc in enumerate(locs):
         for key, arr in loc["hourly"].items():
@@ -96,6 +111,9 @@ def _members(locs, pts, ctx):
             if any(pr[li] is not None for li in near30):
                 rec["p30"] = int(any(pr[li] is not None and pr[li] >= c["precip_in"] for li in near30))
             # no lightning here: these models have no explicit lightning parameter
+            vm = _vis_m(at(f, "visibility", 0, i), vis_unit)
+            if vm is not None:
+                rec["vism"] = vm                # raw metres; thresholded in _finish
             if rec:
                 series[int(t)] = rec
         if series:
@@ -115,22 +133,53 @@ def _cached(scfg, ctx, url):
     except (OSError, ValueError, KeyError):
         pass
     pts = ring_points(ctx.lat, ctx.lon)
-    mem = _members(_fetch(url, scfg["model"], ctx, pts), pts, ctx)
+    mem = _members(_fetch(url, scfg["model"], ctx, pts, scfg.get("extra_vars", [])), pts, ctx)
     if mem:
         with open(path, "w") as f:
             json.dump({"fetched": ctx.now, "members": mem}, f, separators=(",", ":"))
     return mem, time.strftime("%H:%MZ", time.gmtime(ctx.now))
 
 
+def _finish(mem, scfg, ctx):
+    """Turn raw visibility into 1/0 below NBM's lowest threshold, and keep only the
+    rows this source is meant to feed (config "only")."""
+    thr = ctx.vis_thr_m or float(ctx.cons.get("vis_fallback_m", 400))
+    only = set(scfg.get("only", []))
+    # A single deterministic run on its own would give 0% or 100%, so by default it
+    # only counts in hours where NBM's visibility probability also exists.
+    limit = scfg.get("within_nbm_range", True) and bool(ctx.vis_hours)
+    out = {}
+    for mid, series in mem.items():
+        s2 = {}
+        for t, rec in series.items():
+            rec = dict(rec)
+            if "vism" in rec:
+                vm = rec.pop("vism")
+                if not limit or int(t) in ctx.vis_hours:
+                    rec["vis"] = int(vm < thr)
+            if only:
+                rec = {k: v for k, v in rec.items() if k in only}
+            if rec:
+                s2[t] = rec
+        if s2:
+            out[mid] = s2
+    return out, thr
+
+
 def openmeteo_ens(scfg, ctx):
     mem, when = _cached(scfg, ctx, ENS_URL)
+    mem, _ = _finish(mem, scfg, ctx)
     return SourceResult(mem, cycle=when, note=f"{len(mem)} members via Open-Meteo",
                         status="ok" if mem else "missing")
 
 
 def openmeteo_det(scfg, ctx):
     mem, when = _cached(scfg, ctx, DET_URL)
-    return SourceResult(mem, cycle=when, note="via Open-Meteo", status="ok" if mem else "missing")
+    mem, thr = _finish(mem, scfg, ctx)
+    note = "via Open-Meteo"
+    if "vis" in scfg.get("only", []) or "visibility" in scfg.get("extra_vars", []):
+        note = f"visibility below {thr:g} m" + ("" if ctx.vis_thr_m else " (fallback; NBM threshold not found)") + ", via Open-Meteo"
+    return SourceResult(mem, cycle=when, note=note, status="ok" if mem else "missing")
 
 
 # ---------------------------------------------------------------- NWS / NDFD

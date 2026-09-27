@@ -166,6 +166,8 @@ class Context:
     radii: list = field(default_factory=list)
     root: str = "."
     om_refresh_h: float = 3.0
+    vis_thr_m: float | None = None   # NBM's lowest visibility threshold, set by the NBM source
+    vis_hours: set = field(default_factory=set)   # hours where NBM has a visibility probability
     target_m: float = 10.0
     alpha: float = 0.14
 

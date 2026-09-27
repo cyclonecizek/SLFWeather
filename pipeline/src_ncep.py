@@ -233,6 +233,9 @@ def nbm_prob(scfg: dict, ctx: Context) -> SourceResult:
                         if v is not None:
                             rec[key] = max(rec.get(key, 0.0), min(1.0, max(0.0, v / 100.0)))
     series = {t: r for t, r in series.items() if r}
+    if thresholds:
+        ctx.vis_thr_m = min(float(x) for x in thresholds)   # shared with other visibility sources
+    ctx.vis_hours = {t for t, r in series.items() if "vis" in r}
     vis_note = f"; visibility below {', '.join(sorted(thresholds))} m" if thresholds else "; no visibility probability found"
     return SourceResult({"m00": series} if series else {}, cycle=iso(cycle),
                         note="thunder probability, highest within each radius" + vis_note,
