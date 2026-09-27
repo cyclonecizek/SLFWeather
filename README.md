@@ -37,7 +37,8 @@ A member counts toward "any" if it can judge every checked non-lightning
 constraint;
 sources that can't are listed under the result. Lightning rows only use
 models with explicit lightning output (hi-res LTNG, NBM thunder probability)
-and visibility only uses NBM's probability below its lowest threshold, so "any"
+and visibility uses NBM's probability below its lowest threshold plus ECMWF HRES
+judged against that same threshold, so "any"
 is never below those rows when they are checked.
 
 ## Change limits or sources

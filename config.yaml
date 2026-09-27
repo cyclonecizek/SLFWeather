@@ -24,6 +24,9 @@ constraints:
   ltng_threshold: 0.05
   # Global ensembles / NBM: precip >= this (in/hr) at any sample point in the radius.
   precip_in: 0.01
+  # Visibility threshold (m) used for ECMWF HRES when the NBM run has no visibility
+  # probabilities; normally HRES is judged against NBM's lowest threshold.
+  vis_fallback_m: 400
 
 # A member counts toward a window only if it has data for at least this share
 # of the window's hours (relative to its own output interval).
@@ -92,6 +95,18 @@ sources:
     label: NDFD
     family: blend
     weight: 1
+
+  # ECMWF HRES 9 km, used only for the visibility row: 1 when visibility is below
+  # the same threshold NBM uses. Must come after nbm_tstm in this list.
+  - id: ecmwf_hres
+    kind: openmeteo_det
+    label: ECMWF HRES visibility
+    family: global
+    weight: 1
+    model: ecmwf_ifs
+    extra_vars: [visibility]
+    only: [vis]
+    within_nbm_range: true   # false = also use HRES alone past NBM's range (reads 0% or 100%)
 
   - id: ecmwf_ens
     kind: openmeteo_ens
