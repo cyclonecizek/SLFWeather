@@ -28,6 +28,17 @@ The page exports a CSV that the OTV 7-Day workbook imports.
 - 7-Day Forecast!B25 switches guidance between Plume and NBM. Overrides
   (yellow rows) always win.
 
+## Your window
+
+The "Your window" card takes any start and end time (local) and gives the
+chance of breaking each constraint during it, plus the chance of breaking any
+checked constraint. The window is saved in the page link, so it can be shared.
+A member counts toward "any" if it can judge every checked non-lightning
+constraint;
+sources that can't are listed under the result. Lightning rows only use
+models with explicit lightning output (hi-res LTNG, NBM thunder probability),
+so "any" is never below the checked lightning rows.
+
 ## Change limits or sources
 
 `config.yaml`: site, runway, limits, radii, thresholds, window times, source
