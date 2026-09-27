@@ -24,7 +24,7 @@ KINDS = {
     "openmeteo_det": src_web.openmeteo_det,
     "nws_grid": src_web.nws_grid,
 }
-VARS = ("dir", "gst", "rh", "t", "p30", "l30", "l10")
+VARS = ("dir", "gst", "rh", "t", "p30", "l30", "l10", "vis")
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
@@ -33,7 +33,7 @@ def _round(var, x):
         return None
     if var == "p30":
         return int(x)
-    if var in ("l30", "l10"):
+    if var in ("l30", "l10", "vis"):
         return round(float(x), 2)       # 0/1 from lightning fields, 0-1 from NBM probabilities
     if var == "dir":
         return round(x) % 360

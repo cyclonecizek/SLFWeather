@@ -56,7 +56,7 @@ def main():
                     continue
                 print(f"    OK {iso(c)}  {url}")
                 for r in inv:
-                    if ":TSTM:" in r[3]:
+                    if ":TSTM:" in r[3] or (":VIS:" in r[3] and "prob" in r[3].lower()):
                         print(f"       {r[3]}")
                 break
             else:

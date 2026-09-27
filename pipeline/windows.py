@@ -22,7 +22,7 @@ from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 PROB_COLS = [("precip30", "p30"), ("ltng30", "l30"), ("ltng10", "l10"),
-             ("xwind", "xw"), ("headtail", "ht"), ("rh98", "rhx")]
+             ("xwind", "xw"), ("headtail", "ht"), ("vis200", "vis"), ("rh98", "rhx")]
 HEADER = ["key", "local_date", "window", "window_label", "local_start", "precip30", "ltng30", "ltng10",
           "xwind", "headtail", "vis200", "rh98", "low_f", "high_f", "sources", "generated_utc"]
 
@@ -47,7 +47,7 @@ def exceed(var: str, rec_vals: dict, i: int, cons: dict, rwy: float):
     if var == "p30":
         v = rec_vals.get(var)
         return None if v is None or v[i] is None else int(v[i] >= 1)
-    if var in ("l30", "l10"):                       # 0/1 for lightning fields, 0-1 for NBM probability
+    if var in ("l30", "l10", "vis"):                # 0/1 for lightning fields, 0-1 for NBM probabilities
         v = rec_vals.get(var)
         return None if v is None or v[i] is None else float(v[i])
     if var == "rhx":
@@ -94,7 +94,7 @@ def table(data: dict, cfg: dict, enabled: set | None = None) -> list[dict]:
     steps = {}
     for s in srcs:
         for m in s["members"]:
-            for var in ("gst", "rh", "p30", "l30", "l10", "t"):
+            for var in ("gst", "rh", "p30", "l30", "l10", "vis", "t"):
                 arr = m["v"].get(var)
                 steps[(s["id"], m["id"], var)] = _step_hours(times, arr) if arr else 1.0
 
@@ -138,7 +138,6 @@ def table(data: dict, cfg: dict, enabled: set | None = None) -> list[dict]:
                 pairs += [(v, s["weight"] / len(vals_m)) for v in vals_m]
             med = _wmedian(pairs)
             row[col] = None if med is None else int(math.floor(med + 0.5))
-        row["vis200"] = None
         row["sources"] = len(used)
         rows.append(row)
     return rows

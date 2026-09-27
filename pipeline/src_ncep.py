@@ -15,7 +15,7 @@ from concurrent.futures import ThreadPoolExecutor
 from .common import Context, SourceResult, floor_hour, iso, log
 import re
 
-from .grib import Missing, earth_relative, exists, fetch, fetch_area
+from .grib import Missing, earth_relative, exists, fetch, fetch_select
 
 MS_TO_KT = 1.943844
 
@@ -149,14 +149,17 @@ def multi_model(scfg: dict, ctx: Context) -> SourceResult:
     return SourceResult(members, note=note, status=status)
 
 
-# ---------------------------------------------------------------- NBM thunder probability
+# ---------------------------------------------------------------- NBM probabilities
 _TSTM = re.compile(r":TSTM:surface:(\d+)-(\d+) hour")
+_VIS = re.compile(r":VIS:surface:(\d+) hour fcst:.*prob\s*<\s*([\d.]+)", re.I)
 
 
 def nbm_prob(scfg: dict, ctx: Context) -> SourceResult:
-    """NBM thunderstorm probabilities (1, 3 and 6 h periods), highest value within each
-    lightning radius. Stored as one member whose l30/l10 are probabilities (0-1); every hour
-    in a period gets that period's value, and each hour keeps the highest overlapping one."""
+    """NBM probabilities stored as one member of 0-1 values:
+      l30/l10  thunderstorm probability (1, 3 and 6 h periods), highest value within each
+               lightning radius; every hour in a period gets that period's value and keeps
+               the highest overlapping one.
+      vis      probability of visibility below NBM's lowest threshold, at the site."""
     cands = [c for c in (floor_hour(ctx.now) - k * 3600 for k in range(36))
              if time.gmtime(c).tm_hour in set(scfg.get("cycles", [0, 6, 12, 18]))]
     picked = _pick([scfg["base"]], scfg["file"], cands)
@@ -165,36 +168,61 @@ def nbm_prob(scfg: dict, ctx: Context) -> SourceResult:
     base, cycle = picked
     maxdur = int(scfg.get("max_period_h", 6))
 
-    def pick(desc):
-        m = _TSTM.search(desc)
-        if not m or "prob" not in desc.lower():
-            return None
-        a, b = int(m.group(1)), int(m.group(2))
-        return f"{a}-{b}" if 0 < b - a <= maxdur else None
+    def select(inv):
+        out, vis = [], []
+        for rec in inv:
+            d = rec[3]
+            m = _TSTM.search(d)
+            if m and "prob" in d.lower():
+                a, b = int(m.group(1)), int(m.group(2))
+                if 0 < b - a <= maxdur:
+                    out.append((f"t{a}-{b}", rec, "area"))
+            m = _VIS.search(d)
+            if m:
+                vis.append((float(m.group(2)), rec))
+        if vis:
+            thr, rec = min(vis, key=lambda x: x[0])
+            out.append((f"vis<{thr:g}", rec, "point"))
+        return out
 
     def run(fh):
         url = f"{base}/{_fmt(scfg['file'], cycle, fh)}"
-        key = url + "#tstm"
+        key = url + "#nbmp"
         got = ctx.cache.get(key)
         if got is None:
             try:
-                got = {k: {str(int(r)): v for r, v in d.items()} for k, d in
-                       fetch_area(url, pick, ctx.lat, ctx.lon, ctx.radii).items() if isinstance(d, dict)}
+                vals, _ = fetch_select(url, select, ctx.lat, ctx.lon, ctx.radii)
             except Missing:
                 return None
             except Exception as e:
                 log.warning("%s f%03d: %s", scfg["id"], fh, e)
                 return None
+            got = {}
+            for k, v in vals.items():
+                if k.startswith("t") and isinstance(v, dict):
+                    got[k] = {str(int(r)): x for r, x in v.items()}
+                elif k.startswith("vis<") and v is not None:
+                    got[k] = v
             ctx.cache.put(key, cycle, got)
-        return got
+        return fh, got
 
     fhs = [fh for fh in range(1, int(scfg.get("max_fh", 192)) + 1) if ctx.in_window(cycle + fh * 3600)]
     series: dict[int, dict] = {}
     r30, r10 = (str(int(r)) for r in ctx.cons["lightning_radii_nm"])
+    thresholds = set()
     with ThreadPoolExecutor(16) as ex:
-        for got in ex.map(run, fhs):
-            for period, vals in (got or {}).items():
-                a, b = map(int, period.split("-"))
+        for res in ex.map(run, fhs):
+            if not res:
+                continue
+            fh, got = res
+            for name, vals in got.items():
+                if name.startswith("vis<"):
+                    thresholds.add(name[4:])
+                    t = cycle + fh * 3600
+                    if ctx.in_window(t):
+                        series.setdefault(t, {})["vis"] = min(1.0, max(0.0, vals / 100.0))
+                    continue
+                a, b = map(int, name[1:].split("-"))
                 for h in range(a + 1, b + 1):
                     t = cycle + h * 3600
                     if not ctx.in_window(t):
@@ -205,6 +233,7 @@ def nbm_prob(scfg: dict, ctx: Context) -> SourceResult:
                         if v is not None:
                             rec[key] = max(rec.get(key, 0.0), min(1.0, max(0.0, v / 100.0)))
     series = {t: r for t, r in series.items() if r}
+    vis_note = f"; visibility below {', '.join(sorted(thresholds))} m" if thresholds else "; no visibility probability found"
     return SourceResult({"m00": series} if series else {}, cycle=iso(cycle),
-                        note="thunder probability, highest within each radius",
+                        note="thunder probability, highest within each radius" + vis_note,
                         status="ok" if series else "missing")
