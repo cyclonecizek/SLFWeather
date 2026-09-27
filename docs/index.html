@@ -179,7 +179,7 @@ table.cw td.bar2 { width: 34%; }
 
 <section class="method">
   <p><b>Window chance.</b> A member counts as a hit if any hour it has inside the window breaks the limit. Each source's chance is its share of hits; sources are weight-averaged and the result is rounded to the nearest 5%. A member only counts if it covers at least half of the window.</p>
-  <p><b>Winds</b> use the 10 m gust with runway 15/33 at 330° true: crosswind is gust × |sin(angle)| over 10 kt, head/tail is |gust × cos(angle)| over 15 kt. <b>Precip within 30 nm</b> is 1 km reflectivity of 20 dBZ or more anywhere within 30 nm for HRRR, HREF members and NAM, and 0.01 in/hr at any of 13 sample points out to 25 nm for NBM and the global ensembles. <b>Lightning</b> uses only models with explicit lightning output: the hi-res lightning field (HRRR and any member model that carries it) anywhere within 30 and 10 nm, and NBM's 1, 3 and 6 h thunderstorm probability, taking its highest value within each radius. Global ensembles and blends without a lightning parameter don't feed the lightning rows. <b>Visibility under 200 ft</b> has no model guidance and is left blank. <b>High/Low</b> are the weighted median of members' 11–18L maximum and 00–11L minimum.</p>
+  <p><b>Winds</b> use the 10 m gust with runway 15/33 at 330° true: crosswind is gust × |sin(angle)| over 10 kt, head/tail is |gust × cos(angle)| over 15 kt. <b>Precip within 30 nm</b> is 1 km reflectivity of 20 dBZ or more anywhere within 30 nm for HRRR, HREF members and NAM, and 0.01 in/hr at any of 13 sample points out to 25 nm for NBM and the global ensembles. <b>Lightning</b> uses only models with explicit lightning output: the hi-res lightning field (HRRR and any member model that carries it) anywhere within 30 and 10 nm, and NBM's 1, 3 and 6 h thunderstorm probability, taking its highest value within each radius. Global ensembles and blends without a lightning parameter don't feed the lightning rows. <b>Visibility under 200 ft</b> uses NBM's probability of visibility below its lowest threshold at the site (the threshold is listed under Sources). That threshold is well above 200 ft, so treat the value as an upper bound. NBM only carries it for the first few days. <b>High/Low</b> are the weighted median of members' 11–18L maximum and 00–11L minimum.</p>
 </section>
 
 <script>
@@ -193,14 +193,16 @@ const ROWS = [
   { col: "ltng10", v: "l10", name: "Lightning potential", sub: "within 10 nm" },
   { col: "xwind", v: "xw", name: "Crosswinds", sub: "> 10 kt" },
   { col: "headtail", v: "ht", name: "Head/Tailwinds", sub: "> 15 kt" },
-  { col: "vis200", v: null, name: "Visibility", sub: "< 200 ft" },
+  { col: "vis200", v: "vis", name: "Visibility", sub: "< 200 ft" },
   { col: "rh98", v: "rhx", name: "Relative humidity", sub: "> 98%" },
 ];
-const LTNG = new Set(["l30", "l10"]);
+// Rows only a few sources can judge (lightning fields, NBM probabilities). For "any" they are
+// applied as a floor rather than required of every member.
+const LTNG = new Set(["l30", "l10", "vis"]);
 const FAMS = [["hires", "All hi-res"], ["blend", "All blends"], ["global", "All global ens"]];
 const $ = s => document.querySelector(s);
 const state = { data: null, enabled: {}, rows: [], sel: null, cons: "p30", hourly: null,
-  cw: { a: null, b: null }, cwInc: new Set(["p30", "l30", "l10", "xw", "ht", "rhx"]) };
+  cw: { a: null, b: null }, cwInc: new Set(["p30", "l30", "l10", "xw", "ht", "vis", "rhx"]) };
 const store = {
   get(k) { try { return localStorage.getItem(k); } catch { return null; } },
   set(k, v) { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch {} }
@@ -240,7 +242,7 @@ function windowList(d) {
 }
 function exceed(v, vals, i, C, rwy) {
   if (v === "p30") { const a = vals[v]; return a == null || a[i] == null ? null : +(a[i] >= 1); }
-  if (v === "l30" || v === "l10") { const a = vals[v]; return a == null || a[i] == null ? null : +a[i]; }   // 0/1 lightning field, 0-1 NBM probability
+  if (v === "l30" || v === "l10" || v === "vis") { const a = vals[v]; return a == null || a[i] == null ? null : +a[i]; }   // 0/1 lightning field, 0-1 NBM probability
   if (v === "rhx") { const a = vals.rh; return a == null || a[i] == null ? null : +(a[i] > C.rh_pct); }
   const g = vals.gst, d = vals.dir;
   if (!g || !d || g[i] == null || d[i] == null) return null;
@@ -263,7 +265,7 @@ function wmedian(pairs) {
 function prepSteps(d) {
   for (const s of d.sources) for (const m of s.members) {
     m.step = {};
-    for (const v of ["gst", "rh", "p30", "l30", "l10", "t"]) m.step[v] = m.v[v] ? stepHours(d.times, m.v[v]) : 1;
+    for (const v of ["gst", "rh", "p30", "l30", "l10", "vis", "t"]) m.step[v] = m.v[v] ? stepHours(d.times, m.v[v]) : 1;
   }
 }
 function windowTable() {
@@ -340,8 +342,8 @@ function customStats(a, b) {
   }
   const pct = x => x.den ? Math.floor(100 * x.num / x.den / 5 + 0.5) * 5 : null;
   const consOut = Object.fromEntries(cons.map(v => [v, { p: pct(res[v]), per: res[v].per }]));
-  // Most global/blend members have no lightning output. Lightning within a radius comes with
-  // precip in that radius, so ANY is at least the chance of each checked lightning row.
+  // Lightning and visibility come from only a few sources, so ANY is at least the chance of
+  // each checked lightning or visibility row.
   let anyP = pct(any);
   for (const v of inc) if (LTNG.has(v) && consOut[v].p != null) anyP = Math.max(anyP ?? 0, consOut[v].p);
   return { hours: hours.length, cons: consOut, any: { p: anyP, per: any.per } };
@@ -386,7 +388,7 @@ function custom() {
   const skipped = d.sources.filter(s => s.members.length && state.enabled[s.id] && !st.any.per[s.id]).map(s => s.label);
   const ltOn = [...state.cwInc].some(v => LTNG.has(v));
   el.innerHTML = `<div class="cw-grid">${left}<table class="cw">${rows}</table></div>
-    <p class="cw-note">"Any" counts a member once if it breaks at least one checked constraint in any hour of the window, so it is usually higher than the largest single row but not their sum.${ltOn ? " Only some models forecast lightning, so \"any\" is never below the checked lightning rows." : ""}${skipped.length ? ` Not in the member count for "any" because they can't judge every checked non-lightning constraint: ${skipped.join(", ")}.` : ""}</p>`;
+    <p class="cw-note">"Any" counts a member once if it breaks at least one checked constraint in any hour of the window, so it is usually higher than the largest single row but not their sum.${ltOn ? " Lightning and visibility come from only a few sources, so \"any\" is never below those rows when they are checked." : ""}${skipped.length ? ` Not in the member count for "any" because they can't judge every other checked constraint: ${skipped.join(", ")}.` : ""}</p>`;
   el.querySelectorAll("input[type=checkbox]").forEach(cb => cb.addEventListener("change", () => {
     cb.checked ? state.cwInc.add(cb.dataset.v) : state.cwInc.delete(cb.dataset.v);
     store.set("board.cwInc", JSON.stringify([...state.cwInc])); custom();
@@ -599,7 +601,7 @@ async function load(first) {
     let a = hz("start"), b = hz("end");
     if (a == null) { try { ({ a, b } = JSON.parse(store.get("board.cw") || "{}")); } catch {} }
     setCustom(a ?? null, b ?? null, false);
-    try { const inc = JSON.parse(store.get("board.cwInc") || "null"); if (Array.isArray(inc)) state.cwInc = new Set(inc); } catch {}
+    try { const inc = JSON.parse(store.get("board.cwInc") || "null"); if (Array.isArray(inc)) { state.cwInc = new Set(inc); if (!store.get("board.cwVis")) { state.cwInc.add("vis"); store.set("board.cwVis", "1"); } } } catch {}
   }
   header(); segs(); recompute();
 }
