@@ -18,6 +18,7 @@ from .common import Context, PointCache, SourceResult, floor_hour, iso, log
 
 KINDS = {
     "tle": src_ncep.tle,
+    "nbm_prob": src_ncep.nbm_prob,
     "multi_model": src_ncep.multi_model,
     "openmeteo_ens": src_web.openmeteo_ens,
     "openmeteo_det": src_web.openmeteo_det,
@@ -30,8 +31,10 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 def _round(var, x):
     if x is None:
         return None
-    if var in ("p30", "l30", "l10"):
+    if var == "p30":
         return int(x)
+    if var in ("l30", "l10"):
+        return round(float(x), 2)       # 0/1 from lightning fields, 0-1 from NBM probabilities
     if var == "dir":
         return round(x) % 360
     return round(x, 1)

@@ -1,7 +1,8 @@
 """Open-Meteo (global ensembles, NBM) sampled at a ring of points, and NWS gridpoints (NDFD).
 
 Open-Meteo is asked for the site plus two rings of points (10 nm and 25 nm) so
-precip and a lightning proxy can be judged "within" a radius, not just at the site.
+precip can be judged "within" the radius, not just at the site. These models have
+no explicit lightning parameter, so they don't contribute to the lightning rows.
 """
 from __future__ import annotations
 
@@ -17,7 +18,7 @@ from .common import SESSION, Context, SourceResult, log
 ENS_URL = "https://ensemble-api.open-meteo.com/v1/ensemble"
 DET_URL = "https://api.open-meteo.com/v1/forecast"
 VARS = ["wind_speed_10m", "wind_direction_10m", "wind_gusts_10m", "relative_humidity_2m",
-        "temperature_2m", "precipitation", "cape"]
+        "temperature_2m", "precipitation"]
 _KEY = re.compile(r"^(" + "|".join(VARS) + r")(?:_member(\d+))?$")
 
 
@@ -45,13 +46,13 @@ def _params(model, ctx, pts, variables):
 
 def _fetch(url, model, ctx, pts):
     variables = list(VARS)
-    for drop in (None, "cape", "wind_gusts_10m"):
+    for drop in (None, "wind_gusts_10m"):
         if drop:
             variables.remove(drop)
         r = SESSION.get(url, params=_params(model, ctx, pts, variables), timeout=120)
         if r.status_code != 400:
             break
-        log.info("%s: %s rejected, retrying without %s", model, r.text[:100], drop or "cape")
+        log.info("%s: %s rejected, retrying without gusts", model, r.text[:100])
     r.raise_for_status()
     js = r.json()
     return js if isinstance(js, list) else [js]
@@ -59,7 +60,6 @@ def _fetch(url, model, ctx, pts):
 
 def _members(locs, pts, ctx):
     c = ctx.cons
-    near10 = [i for i, p in enumerate(pts) if p[2] <= min(c["lightning_radii_nm"])]
     near30 = [i for i, p in enumerate(pts) if p[2] <= c["precip_radius_nm"]]
     times = locs[0]["hourly"]["time"]
     per: dict[str, dict] = {}                  # member -> var -> [loc arrays]
@@ -93,13 +93,9 @@ def _members(locs, pts, ctx):
             if at(f, "temperature_2m", 0, i) is not None:
                 rec["t"] = at(f, "temperature_2m", 0, i)
             pr = [at(f, "precipitation", li, i) for li in range(len(pts))]
-            cp = [at(f, "cape", li, i) for li in range(len(pts))]
             if any(pr[li] is not None for li in near30):
                 rec["p30"] = int(any(pr[li] is not None and pr[li] >= c["precip_in"] for li in near30))
-            for key, idx in (("l30", near30), ("l10", near10)):
-                ok = [li for li in idx if pr[li] is not None and cp[li] is not None]
-                if ok:
-                    rec[key] = int(any(pr[li] >= c["precip_in"] and cp[li] >= c["cape_jkg"] for li in ok))
+            # no lightning here: these models have no explicit lightning parameter
             if rec:
                 series[int(t)] = rec
         if series:

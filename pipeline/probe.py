@@ -46,6 +46,21 @@ def main():
         print(f"\n[{s['id']}] {s.get('label', '')} ({s['kind']})")
         if s["kind"] == "tle":
             probe_grib([s["base"]], s["file"], [floor_hour(now) - k * 3600 for k in range(10)])
+        elif s["kind"] == "nbm_prob":
+            cyc = [c for c in (floor_hour(now) - k * 3600 for k in range(36)) if time.gmtime(c).tm_hour in set(s.get("cycles", [0, 6, 12, 18]))]
+            for c in cyc:
+                url = f"{s['base']}/{_fmt(s['file'], c, 6)}"
+                try:
+                    inv = read_idx(url + ".idx")
+                except Missing:
+                    continue
+                print(f"    OK {iso(c)}  {url}")
+                for r in inv:
+                    if ":TSTM:" in r[3]:
+                        print(f"       {r[3]}")
+                break
+            else:
+                print("    -- no recent NBM cycle found")
         elif s["kind"] == "multi_model":
             for comp in s["components"]:
                 print(f"  {comp['id']}:")

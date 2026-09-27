@@ -234,6 +234,21 @@ def fetch(grib_url: str, lat: float, lon: float, radii_nm: list[float]) -> tuple
     inv = read_idx(grib_url + ".idx")
     kinds = {**{k: "point" for k in POINT}, **{k: "area" for k in AREA}}
     found = sorted(match_fields(inv, {**POINT, **AREA}).items(), key=lambda kv: kv[1][1])
+    return _fetch_found(grib_url, found, kinds, lat, lon, radii_nm)
+
+
+def fetch_area(grib_url: str, pick, lat: float, lon: float, radii_nm: list[float]) -> dict:
+    """Area maxima for every inventory record where pick(description) returns a name.
+    Returns {name: {radius: max}}. Raises Missing."""
+    if eccodes is None:
+        raise RuntimeError("eccodes not installed")
+    inv = read_idx(grib_url + ".idx")
+    found = sorted(((pick(r[3]), r) for r in inv if pick(r[3])), key=lambda kv: kv[1][1])
+    vals, _ = _fetch_found(grib_url, found, {n: "area" for n, _ in found}, lat, lon, radii_nm)
+    return vals
+
+
+def _fetch_found(grib_url, found, kinds, lat, lon, radii_nm):
     if not found:
         return {}, {}
 

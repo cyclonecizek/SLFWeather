@@ -44,9 +44,12 @@ def window_list(now: int, tz: str, spans, days: int):
 
 def exceed(var: str, rec_vals: dict, i: int, cons: dict, rwy: float):
     """1/0 if the member-hour can be judged for this constraint, else None."""
-    if var in ("p30", "l30", "l10"):
+    if var == "p30":
         v = rec_vals.get(var)
         return None if v is None or v[i] is None else int(v[i] >= 1)
+    if var in ("l30", "l10"):                       # 0/1 for lightning fields, 0-1 for NBM probability
+        v = rec_vals.get(var)
+        return None if v is None or v[i] is None else float(v[i])
     if var == "rhx":
         v = rec_vals.get("rh")
         return None if v is None or v[i] is None else int(v[i] > cons["rh_pct"])
