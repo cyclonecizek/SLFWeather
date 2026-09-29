@@ -41,6 +41,23 @@ and visibility uses NBM's probability below its lowest threshold plus ECMWF HRES
 judged against that same threshold, so "any"
 is never below those rows when they are checked.
 
+## Wind CSVs (stand-in for the GSL NBM file)
+
+Each hourly run also publishes two files in the same layout as the GSL 1D-viewer
+NBM point CSV, so the workbook's normal NBM import reads them with no changes:
+
+- `docs/data/KTTS_NBM_wind.csv`: NBM alone (from Open-Meteo, not GSL).
+- `docs/data/KTTS_ENS_wind.csv`: every source blended with the board's weights.
+  Wind and gust are the weighted median, direction is the weighted mean wind
+  vector, and the gust / wind / RH percentile columns come from all members.
+
+Both have hourly rows from the current hour out to the end of the board, with
+wind and gust in m/s, RH in % and temperature in K. They carry wind, RH and
+temperature only, so the workbook's NBM status reads "some 7-Day guidance
+fields missing"; keep 7-Day Forecast!B25 on Plume for those rows. The page's
+**Wind CSV** buttons download the published files. Name and NBM source id are
+set under `wind_csv` in `config.yaml`.
+
 ## Change limits or sources
 
 `config.yaml`: site, runway, limits, radii, thresholds, window times, source

@@ -11,6 +11,12 @@ days: 8
 
 runway_heading_true: 330
 
+# Wind CSVs in the GSL NBM point-file layout for the OTV Forecast Template's NBM import:
+# docs/data/<name>_NBM_wind.csv (NBM alone) and docs/data/<name>_ENS_wind.csv (all sources).
+wind_csv:
+  name: KTTS
+  nbm_source: nbm
+
 constraints:
   crosswind_kt: 10            # 10 m gust x |sin(dir - runway)| above this
   headtail_kt: 15             # |10 m gust x cos(dir - runway)| above this (one runway end over its limit)
