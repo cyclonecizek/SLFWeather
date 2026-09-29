@@ -41,6 +41,7 @@ h1 { margin: 0; font-size: 30px; font-weight: 700; letter-spacing: -0.01em; line
 .actions { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; padding: 12px 20px; border-bottom: 1px solid var(--rule); }
 .btn { background: var(--ink); color: var(--panel); border: 0; border-radius: 4px; padding: 7px 14px; font-weight: 600; cursor: pointer; }
 .btn.ghost { background: var(--panel); color: var(--ink); border: 1px solid var(--rule); font-weight: 500; }
+a.btn { text-decoration: none; display: inline-block; }
 .hint { color: var(--muted); }
 .banner { margin: 12px 20px 0; padding: 8px 12px; border-left: 4px solid var(--marginal); background: var(--panel); }
 .banner.bad { border-color: var(--severe); }
@@ -133,6 +134,8 @@ table.cw td.bar2 { width: 34%; }
 <div class="actions">
   <button class="btn" id="dl" type="button">Download CSV for Excel</button>
   <button class="btn ghost" id="copy" type="button">Copy published CSV link</button>
+  <a class="btn ghost" href="data/KTTS_NBM_wind.csv" download="KTTS_NBM_wind.csv" title="NBM alone, GSL NBM file layout">Wind CSV: NBM</a>
+  <a class="btn ghost" href="data/KTTS_ENS_wind.csv" download="KTTS_ENS_wind.csv" title="All sources blended, GSL NBM file layout">Wind CSV: ensemble</a>
   <span class="hint" id="dlhint">The CSV uses the sources switched on below.</span>
 </div>
 <div id="banners"></div>
