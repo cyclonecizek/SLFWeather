@@ -13,7 +13,7 @@ import time
 
 import yaml
 
-from . import src_ncep, src_web, windows
+from . import src_ncep, src_web, windcsv, windows
 from .common import Context, PointCache, SourceResult, floor_hour, iso, log
 
 KINDS = {
@@ -24,7 +24,7 @@ KINDS = {
     "openmeteo_det": src_web.openmeteo_det,
     "nws_grid": src_web.nws_grid,
 }
-VARS = ("dir", "gst", "rh", "t", "p30", "l30", "l10", "vis")
+VARS = ("spd", "dir", "gst", "rh", "t", "p30", "l30", "l10", "vis")
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
@@ -113,6 +113,17 @@ def main(argv=None):
     rows = windows.table(data, cfg)
     with open(os.path.join(out, "constraints.csv"), "w", newline="") as f:
         f.write(windows.to_csv(rows, data["generated"], cfg["site"]["display_tz"]))
+    name = (cfg.get("wind_csv") or {}).get("name", "KTTS")
+    for tag, text in (("NBM", windcsv.nbm_csv(data, (cfg.get("wind_csv") or {}).get("nbm_source", "nbm"))),
+                      ("ENS", windcsv.ens_csv(data))):
+        path = os.path.join(out, f"{name}_{tag}_wind.csv")
+        if text is None:
+            log.warning("%s wind CSV: no wind members; keeping the previous file", tag)
+            continue
+        with open(path + ".tmp", "w", newline="") as f:
+            f.write(text)
+        os.replace(path + ".tmp", path)
+        log.info("wrote %s (%d rows)", os.path.basename(path), text.count("\n") - 1)
     log.info("wrote board.json (%.0f kB) and constraints.csv (%d windows)",
              os.path.getsize(os.path.join(out, "board.json")) / 1024, len(rows))
     return 0
