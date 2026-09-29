@@ -30,7 +30,7 @@ jobs:
         run: |
           git config user.name  "board-bot"
           git config user.email "board-bot@users.noreply.github.com"
-          git add docs/data/board.json docs/data/constraints.csv cache/
+          git add docs/data/ cache/
           git diff --cached --quiet && exit 0
           git commit -m "board $(date -u +%Y-%m-%dT%H:%MZ)"
           for i in 1 2 3; do
