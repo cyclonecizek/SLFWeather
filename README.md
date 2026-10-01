@@ -1,10 +1,8 @@
 # 7-Day Constraint Probabilities
 
-Hourly-updated chance of each 7-Day product constraint (precip within 30 nm,
-lightning within 30/10 nm, crosswinds, head/tailwinds, visibility, RH > 98 %, plus
-high/low) for every local window, built from HRRR, the HREF member models,
+Hourly-updated chance of each 7-Day product constraint for every local window, built from HRRR, the HREF member models,
 NAM 3 km, NBM, NDFD and the ECMWF, AIFS, GEFS, ICON and GEM ensembles.
-The page exports a CSV that the OTV 7-Day workbook imports.
+
 
 ## Set up
 
