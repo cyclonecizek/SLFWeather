@@ -69,8 +69,7 @@ longer window that contains it. High/Low keep the standard definitions (00-11L m
 maximum) and span the blocks they cover. The hourly run publishes `docs/data/constraints.csv`
 (Standard) and `docs/data/constraints_fine.csv` (Fine); the page's **Download CSV for Excel**
 button saves whichever layout is showing (`Constraint_Plume.csv` or `Constraint_Plume_Fine.csv`).
-`OTV_7Day_Fine_Matrix.xlsx` imports the Fine CSV. The block lengths are under `fine_layout` in
-`config.yaml`. `windows.py` and the page's `windowList` / `windowTable` must stay in step.
+
 
 ## Change limits or sources
 
