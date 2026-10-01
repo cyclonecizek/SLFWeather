@@ -90,6 +90,7 @@ def build(cfg: dict, only: set | None = None) -> dict:
             "runway_heading_true": cfg["runway_heading_true"], "constraints": cons,
             "windows": cfg["windows"], "days": days,
             "min_window_coverage": cfg.get("min_window_coverage", 0.5),
+            "fine_layout": cfg.get("fine_layout"),
             "times": timeline, "sources": sources}
 
 
@@ -113,6 +114,9 @@ def main(argv=None):
     rows = windows.table(data, cfg)
     with open(os.path.join(out, "constraints.csv"), "w", newline="") as f:
         f.write(windows.to_csv(rows, data["generated"], cfg["site"]["display_tz"]))
+    fine = windows.table(data, cfg, layout="fine")
+    with open(os.path.join(out, "constraints_fine.csv"), "w", newline="") as f:
+        f.write(windows.to_csv(fine, data["generated"], cfg["site"]["display_tz"]))
     name = (cfg.get("wind_csv") or {}).get("name", "KTTS")
     for tag, text in (("NBM", windcsv.nbm_csv(data, (cfg.get("wind_csv") or {}).get("nbm_source", "nbm"))),
                       ("ENS", windcsv.ens_csv(data))):
@@ -124,8 +128,8 @@ def main(argv=None):
             f.write(text)
         os.replace(path + ".tmp", path)
         log.info("wrote %s (%d rows)", os.path.basename(path), text.count("\n") - 1)
-    log.info("wrote board.json (%.0f kB) and constraints.csv (%d windows)",
-             os.path.getsize(os.path.join(out, "board.json")) / 1024, len(rows))
+    log.info("wrote board.json (%.0f kB), constraints.csv (%d windows) and constraints_fine.csv (%d blocks)",
+             os.path.getsize(os.path.join(out, "board.json")) / 1024, len(rows), len(fine))
     return 0
 
 

@@ -12,6 +12,13 @@ For each window and constraint:
   rounded to the nearest 5 %.
 Low = weighted median of members' minimum 2 m temperature in the 00-11L window;
 High = weighted median of members' maximum in the 11-18L window.
+
+Two layouts share this logic. "std" is the 3-window day (config `windows`) starting
+yesterday. "fine" is 3-hour blocks for the first `fine_layout.three_hour_days` days and
+6-hour blocks for the next `fine_layout.six_hour_days`, starting today. In the fine layout
+High/Low keep the std definitions (the 00-11L minimum and 11-18L maximum); the Low is
+carried by the first block of the day and the High by the first block that starts at or
+after the end of the Low window, and the page merges the cells.
 """
 from __future__ import annotations
 
@@ -27,6 +34,10 @@ HEADER = ["key", "local_date", "window", "window_label", "local_start", "precip3
           "xwind", "headtail", "vis200", "rh98", "low_f", "high_f", "sources", "generated_utc"]
 
 
+def _key(a: datetime) -> int:
+    return int(f"{a:%Y%m%d%H}")
+
+
 def window_list(now: int, tz: str, spans, days: int):
     """[(key, date_str, win_no, label, start_unix, end_unix)] from yesterday (local) onward."""
     z = ZoneInfo(tz)
@@ -37,8 +48,58 @@ def window_list(now: int, tz: str, spans, days: int):
         for w, (h0, h1) in enumerate(spans, 1):
             a = datetime(day.year, day.month, day.day, tzinfo=z) + timedelta(hours=h0)
             b = datetime(day.year, day.month, day.day, tzinfo=z) + timedelta(hours=h1)
-            key = int(f"{a:%Y%m%d%H}")
-            out.append((key, f"{day:%Y-%m-%d}", w, f"{h0:02d}-{h1:02d}L", int(a.timestamp()), int(b.timestamp())))
+            out.append((_key(a), f"{day:%Y-%m-%d}", w, f"{h0:02d}-{h1:02d}L", int(a.timestamp()), int(b.timestamp())))
+    return out
+
+
+THREE_H = [[h, h + 3] for h in range(0, 24, 3)]
+SIX_H = [[h, h + 6] for h in range(0, 24, 6)]
+
+
+def fine_counts(cfg: dict) -> tuple[int, int]:
+    f = cfg.get("fine_layout") or {}
+    return int(f.get("three_hour_days", 5)), int(f.get("six_hour_days", 2))
+
+
+def layout_windows(cfg: dict, now: int, layout: str = "std") -> list[dict]:
+    """Window dicts for either layout.
+
+    Keys: key, date, w, label, a, b (unix), day (0-based within the layout), h0 (local start
+    hour), grp ('low' | 'high' | 'rest', how the page merges the High/Low row), tl ('low' |
+    'high' | None, which window carries a temperature value) and ta/tb (the span it is taken over).
+    """
+    tz = cfg["site"]["display_tz"]
+    z = ZoneInfo(tz)
+    lo_span, hi_span = cfg["windows"][0], cfg["windows"][1]
+    if layout == "std":
+        out = []
+        for key, date, w, label, a, b in window_list(now, tz, cfg["windows"], int(cfg["days"])):
+            h0 = cfg["windows"][w - 1][0]
+            grp = "low" if w == 1 else "high" if w == 2 else "rest"
+            tl = "low" if w == 1 else "high" if w == 2 else None
+            out.append(dict(key=key, date=date, w=w, label=label, a=a, b=b, day=None, h0=h0,
+                            grp=grp, tl=tl, ta=a, tb=b))
+        return out
+    n3, n6 = fine_counts(cfg)
+    d0 = datetime.fromtimestamp(now, z).date()
+    out = []
+    for d in range(n3 + n6):
+        day = d0 + timedelta(days=d)
+        mid = datetime(day.year, day.month, day.day, tzinfo=z)
+        spans = THREE_H if d < n3 else SIX_H
+        first = {}
+        for w, (h0, h1) in enumerate(spans, 1):
+            a, b = mid + timedelta(hours=h0), mid + timedelta(hours=h1)
+            grp = "low" if h0 < lo_span[1] else "high" if h0 < hi_span[1] else "rest"
+            tl = None
+            if grp in ("low", "high") and grp not in first:
+                first[grp] = w
+                tl = grp
+            span = lo_span if tl == "low" else hi_span
+            out.append(dict(key=_key(a), date=f"{day:%Y-%m-%d}", w=w, label=f"{h0:02d}-{h1:02d}L",
+                            a=int(a.timestamp()), b=int(b.timestamp()), day=d, h0=h0, grp=grp, tl=tl,
+                            ta=int((mid + timedelta(hours=span[0])).timestamp()),
+                            tb=int((mid + timedelta(hours=span[1])).timestamp())))
     return out
 
 
@@ -83,13 +144,13 @@ def _wmedian(pairs):
     return pairs[-1][0]
 
 
-def table(data: dict, cfg: dict, enabled: set | None = None) -> list[dict]:
+def table(data: dict, cfg: dict, enabled: set | None = None, layout: str = "std") -> list[dict]:
     cons = cfg["constraints"]
     rwy = float(cfg["runway_heading_true"])
     cov = float(cfg.get("min_window_coverage", 0.5))
     times = data["times"]
     tindex = {t: i for i, t in enumerate(times)}
-    wins = window_list(data["generated_unix"], cfg["site"]["display_tz"], cfg["windows"], int(cfg["days"]))
+    wins = layout_windows(cfg, data["generated_unix"], layout)
     srcs = [s for s in data["sources"] if s["members"] and (enabled is None or s["id"] in enabled)]
     steps = {}
     for s in srcs:
@@ -99,10 +160,12 @@ def table(data: dict, cfg: dict, enabled: set | None = None) -> list[dict]:
                 steps[(s["id"], m["id"], var)] = _step_hours(times, arr) if arr else 1.0
 
     rows = []
-    for key, date, w, label, a, b in wins:
+    for W in wins:
+        key, date, w, label, a, b = W["key"], W["date"], W["w"], W["label"], W["a"], W["b"]
         hours = [tindex[t] for t in range(a, b, 3600) if t in tindex]
         nh = (b - a) / 3600
-        row = {"key": key, "local_date": date, "window": w, "window_label": label, "local_start": a}
+        row = {"key": key, "local_date": date, "window": w, "window_label": label, "local_start": a,
+               "group": W["grp"], "day": W["day"], "h0": W["h0"], "b": b}
         used = set()
         for col, var in PROB_COLS:
             base = "gst" if var in ("xw", "ht") else ("rh" if var == "rhx" else var)
@@ -121,10 +184,12 @@ def table(data: dict, cfg: dict, enabled: set | None = None) -> list[dict]:
                     den += s["weight"]
                     used.add(s["id"])
             row[col] = int(math.floor(100 * num / den / 5 + 0.5) * 5) if den else None   # half-up, same as JS
-        for col, want, fn in (("low_f", 1, min), ("high_f", 2, max)):
+        for col, want, fn in (("low_f", "low", min), ("high_f", "high", max)):
             row[col] = None
-            if w != want:
+            if W["tl"] != want:
                 continue
+            thours = [tindex[t] for t in range(W["ta"], W["tb"], 3600) if t in tindex]
+            tnh = (W["tb"] - W["ta"]) / 3600
             pairs = []
             for s in srcs:
                 vals_m = []
@@ -132,8 +197,8 @@ def table(data: dict, cfg: dict, enabled: set | None = None) -> list[dict]:
                     t = m["v"].get("t")
                     if not t:
                         continue
-                    v = [t[i] for i in hours if t[i] is not None]
-                    if len(v) >= max(1, math.floor(cov * nh / steps[(s["id"], m["id"], "t")])):
+                    v = [t[i] for i in thours if t[i] is not None]
+                    if len(v) >= max(1, math.floor(cov * tnh / steps[(s["id"], m["id"], "t")])):
                         vals_m.append(fn(v))
                 pairs += [(v, s["weight"] / len(vals_m)) for v in vals_m]
             med = _wmedian(pairs)
