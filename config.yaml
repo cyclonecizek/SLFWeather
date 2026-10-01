@@ -9,6 +9,12 @@ site:
 windows: [[0, 11], [11, 18], [18, 24]]
 days: 8
 
+# "Fine" layout (the page's Time blocks dropdown): 3-hour blocks for the first N days,
+# then 6-hour blocks, starting today. High/Low keep the windows[0] / windows[1] definitions.
+fine_layout:
+  three_hour_days: 5
+  six_hour_days: 2
+
 runway_heading_true: 330
 
 # Wind CSVs in the GSL NBM point-file layout for the OTV Forecast Template's NBM import:

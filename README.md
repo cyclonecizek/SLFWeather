@@ -58,6 +58,22 @@ fields missing"; keep 7-Day Forecast!B25 on Plume for those rows. The page's
 **Wind CSV** buttons download the published files. Name and NBM source id are
 set under `wind_csv` in `config.yaml`.
 
+## Time blocks (Standard or Fine)
+
+The page has a **Time blocks** dropdown (it remembers your choice; `?layout=fine` opens it directly):
+
+- **Standard**: the product's three windows a day (00-11L, 11-18L, 18-24L).
+- **Fine**: 3-hour blocks for days 1-5 and 6-hour blocks for days 6-7, starting today
+  (00-03L ... 21-24L, then 00-06L ... 18-24L).
+
+The rules are the same; each block is judged on its own hours, so a block reads lower than a
+longer window that contains it. High/Low keep the standard definitions (00-11L minimum, 11-18L
+maximum) and span the blocks they cover. The hourly run publishes `docs/data/constraints.csv`
+(Standard) and `docs/data/constraints_fine.csv` (Fine); the page's **Download CSV for Excel**
+button saves whichever layout is showing (`Constraint_Plume.csv` or `Constraint_Plume_Fine.csv`).
+`OTV_7Day_Fine_Matrix.xlsx` imports the Fine CSV. The block lengths are under `fine_layout` in
+`config.yaml`. `windows.py` and the page's `windowList` / `windowTable` must stay in step.
+
 ## Change limits or sources
 
 `config.yaml`: site, runway, limits, radii, thresholds, window times, source
