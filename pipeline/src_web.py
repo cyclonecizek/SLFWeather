@@ -18,7 +18,7 @@ from .common import SESSION, Context, SourceResult, log
 ENS_URL = "https://ensemble-api.open-meteo.com/v1/ensemble"
 DET_URL = "https://api.open-meteo.com/v1/forecast"
 VARS = ["wind_speed_10m", "wind_direction_10m", "wind_gusts_10m", "relative_humidity_2m",
-        "temperature_2m", "precipitation"]
+        "temperature_2m", "precipitation", "cloud_cover"]
 _KEY = re.compile(r"^(" + "|".join(VARS + ["visibility"]) + r")(?:_member(\d+))?$")
 
 
@@ -47,13 +47,15 @@ def _params(model, ctx, pts, variables):
 
 def _fetch(url, model, ctx, pts, extra=()):
     variables = list(VARS) + list(extra)
-    for drop in (None, "wind_gusts_10m"):
-        if drop:
+    # Optional variables are dropped one at a time if the API rejects the request, sky cover
+    # first and gusts only if that still fails, so sky cover can never take the winds down.
+    for drop in (None, "cloud_cover", "wind_gusts_10m"):
+        if drop in variables:
             variables.remove(drop)
         r = SESSION.get(url, params=_params(model, ctx, pts, variables), timeout=120)
         if r.status_code != 400:
             break
-        log.info("%s: %s rejected, retrying without gusts", model, r.text[:100])
+        log.info("%s: %s rejected, retrying with fewer variables", model, r.text[:100])
     r.raise_for_status()
     js = r.json()
     return js if isinstance(js, list) else [js]
@@ -107,6 +109,8 @@ def _members(locs, pts, ctx):
                 rec["rh"] = at(f, "relative_humidity_2m", 0, i)
             if at(f, "temperature_2m", 0, i) is not None:
                 rec["t"] = at(f, "temperature_2m", 0, i)
+            if at(f, "cloud_cover", 0, i) is not None:
+                rec["sky"] = at(f, "cloud_cover", 0, i)
             pr = [at(f, "precipitation", li, i) for li in range(len(pts))]
             if any(pr[li] is not None for li in near30):
                 rec["p30"] = int(any(pr[li] is not None and pr[li] >= c["precip_in"] for li in near30))
@@ -220,8 +224,9 @@ def nws_grid(scfg, ctx):
     gst, gu = _expand(p.get("windGust"))
     rh, _ = _expand(p.get("relativeHumidity"))
     tmp, tu = _expand(p.get("temperature"))
+    sky, _ = _expand(p.get("skyCover"))
     series = {}
-    for t in sorted(set(spd) | set(rh) | set(tmp)):
+    for t in sorted(set(spd) | set(rh) | set(tmp) | set(sky)):
         if not ctx.in_window(t):
             continue
         rec = {}
@@ -233,7 +238,9 @@ def nws_grid(scfg, ctx):
             rec["rh"] = rh[t]
         if tmp.get(t) is not None:
             rec["t"] = tmp[t] * 9 / 5 + 32 if "degC" in tu else tmp[t]
+        if sky.get(t) is not None:
+            rec["sky"] = sky[t]
         if rec:
             series[t] = rec
     return SourceResult({"m00": series} if series else {}, cycle=p.get("updateTime", "")[:16].replace("T", " "),
-                        note="wind, RH and temperature only", status="ok" if series else "missing")
+                        note="wind, RH, temperature and sky cover only", status="ok" if series else "missing")

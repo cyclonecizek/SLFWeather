@@ -32,6 +32,7 @@ PROB_COLS = [("precip30", "p30"), ("ltng30", "l30"), ("ltng10", "l10"),
              ("xwind", "xw"), ("headtail", "ht"), ("vis200", "vis"), ("rh98", "rhx")]
 HEADER = ["key", "local_date", "window", "window_label", "local_start", "precip30", "ltng30", "ltng10",
           "xwind", "headtail", "vis200", "rh98", "low_f", "high_f", "sources", "generated_utc"]
+FINE_EXTRA = ["sky_pct"]     # fine-layout CSV only; the standard CSV keeps its original columns
 
 
 def _key(a: datetime) -> int:
@@ -155,7 +156,7 @@ def table(data: dict, cfg: dict, enabled: set | None = None, layout: str = "std"
     steps = {}
     for s in srcs:
         for m in s["members"]:
-            for var in ("gst", "rh", "p30", "l30", "l10", "vis", "t"):
+            for var in ("gst", "rh", "p30", "l30", "l10", "vis", "t", "sky"):
                 arr = m["v"].get(var)
                 steps[(s["id"], m["id"], var)] = _step_hours(times, arr) if arr else 1.0
 
@@ -203,20 +204,37 @@ def table(data: dict, cfg: dict, enabled: set | None = None, layout: str = "std"
                 pairs += [(v, s["weight"] / len(vals_m)) for v in vals_m]
             med = _wmedian(pairs)
             row[col] = None if med is None else int(math.floor(med + 0.5))
+        # Sky cover: weighted median of members' mean cloud cover over the window, nearest 5 %.
+        pairs = []
+        for s in srcs:
+            vals_m = []
+            for m in s["members"]:
+                a = m["v"].get("sky")
+                if not a:
+                    continue
+                v = [a[i] for i in hours if a[i] is not None]
+                if len(v) >= max(1, math.floor(cov * nh / steps[(s["id"], m["id"], "sky")])):
+                    acc = 0.0
+                    for x in v:               # plain left-to-right sum, same as the page
+                        acc += x
+                    vals_m.append(acc / len(v))
+            pairs += [(x, s["weight"] / len(vals_m)) for x in vals_m]
+        med = _wmedian(pairs)
+        row["sky"] = None if med is None else int(math.floor(med / 5 + 0.5) * 5)
         row["sources"] = len(used)
         rows.append(row)
     return rows
 
 
-def to_csv(rows: list[dict], generated: str, tz: str) -> str:
+def to_csv(rows: list[dict], generated: str, tz: str, with_sky: bool = False) -> str:
     z = ZoneInfo(tz)
     buf = io.StringIO()
     w = csv.writer(buf, lineterminator="\r\n")
-    w.writerow(HEADER)
+    w.writerow(HEADER + (FINE_EXTRA if with_sky else []))
     for r in rows:
         w.writerow([r["key"], r["local_date"], r["window"], r["window_label"],
                     datetime.fromtimestamp(r["local_start"], z).strftime("%Y-%m-%d %H:%M"),
                     *["" if r[c] is None else r[c] for c in
                       ("precip30", "ltng30", "ltng10", "xwind", "headtail", "vis200", "rh98", "low_f", "high_f")],
-                    r["sources"], generated])
+                    r["sources"], generated, *([("" if r.get("sky") is None else r["sky"])] if with_sky else [])])
     return buf.getvalue()

@@ -24,7 +24,7 @@ KINDS = {
     "openmeteo_det": src_web.openmeteo_det,
     "nws_grid": src_web.nws_grid,
 }
-VARS = ("spd", "dir", "gst", "rh", "t", "p30", "l30", "l10", "vis")
+VARS = ("spd", "dir", "gst", "rh", "t", "sky", "p30", "l30", "l10", "vis")
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
@@ -116,7 +116,7 @@ def main(argv=None):
         f.write(windows.to_csv(rows, data["generated"], cfg["site"]["display_tz"]))
     fine = windows.table(data, cfg, layout="fine")
     with open(os.path.join(out, "constraints_fine.csv"), "w", newline="") as f:
-        f.write(windows.to_csv(fine, data["generated"], cfg["site"]["display_tz"]))
+        f.write(windows.to_csv(fine, data["generated"], cfg["site"]["display_tz"], with_sky=True))
     name = (cfg.get("wind_csv") or {}).get("name", "KTTS")
     for tag, text in (("NBM", windcsv.nbm_csv(data, (cfg.get("wind_csv") or {}).get("nbm_source", "nbm"))),
                       ("ENS", windcsv.ens_csv(data))):
