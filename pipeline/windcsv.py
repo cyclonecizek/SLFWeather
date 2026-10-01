@@ -1,6 +1,6 @@
 """Wind CSVs in the same layout as the GSL 1D-viewer NBM point file.
 
-The OTV Forecast Template finds its columns by header name, so either file can be
+The forecast workbook finds its columns by header name, so either file can be
 loaded through the workbook's normal NBM import with no workbook changes.
 
   <name>_NBM_wind.csv  NBM alone (Open-Meteo NBM CONUS), a straight stand-in for GSL.
