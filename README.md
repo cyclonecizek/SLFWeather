@@ -1,8 +1,10 @@
 # 7-Day Constraint Probabilities
 
-Hourly-updated chance of each 7-Day product constraint for every local window, built from HRRR, the HREF member models,
+Hourly-updated chance of each 7-Day product constraint (precip within 30 nm,
+lightning within 30/10 nm, crosswinds, head/tailwinds, visibility, RH > 98 %, plus
+high/low) for every local window, built from HRRR, the HREF member models,
 NAM 3 km, NBM, NDFD and the ECMWF, AIFS, GEFS, ICON and GEM ensembles.
-
+The page exports a CSV that the 7-Day workbook imports.
 
 ## Set up
 
@@ -69,7 +71,11 @@ longer window that contains it. High/Low keep the standard definitions (00-11L m
 maximum) and span the blocks they cover. The hourly run publishes `docs/data/constraints.csv`
 (Standard) and `docs/data/constraints_fine.csv` (Fine); the page's **Download CSV for Excel**
 button saves whichever layout is showing (`Constraint_Plume.csv` or `Constraint_Plume_Fine.csv`).
-
+In the Fine layout the grid has a **Sky cover** row (each member's average cloud cover over the block,
+weighted median across NBM, NDFD and the global ensembles, nearest 5%) and the Fine CSV carries it in a
+last `sky_pct` column; the Standard CSV is unchanged. Sky cover is requested from Open-Meteo as an optional
+variable: if a model rejects it, only sky cover is dropped, never the winds. The companion 7-Day Fine workbook imports the Fine CSV. The block lengths are under `fine_layout` in
+`config.yaml`. `windows.py` and the page's `windowList` / `windowTable` must stay in step.
 
 ## Change limits or sources
 
