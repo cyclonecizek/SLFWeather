@@ -17,7 +17,7 @@ fine_layout:
 
 runway_heading_true: 330
 
-# Wind CSVs in the GSL NBM point-file layout for the OTV Forecast Template's NBM import:
+# Wind CSVs in the GSL NBM point-file layout for the forecast workbook's NBM import:
 # docs/data/<name>_NBM_wind.csv (NBM alone) and docs/data/<name>_ENS_wind.csv (all sources).
 wind_csv:
   name: KTTS
