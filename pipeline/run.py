@@ -1,4 +1,4 @@
-"""Build docs/data/board.json and docs/data/constraints.csv.
+"""Build docs/data/board.json for the splashdown board.
 
     python -m pipeline.run [--only hrrr,gefs]
 """
@@ -13,49 +13,28 @@ import time
 
 import yaml
 
-from . import src_ncep, src_web, windcsv, windows
+from . import src_mos, src_ncep, src_web
 from .common import Context, PointCache, SourceResult, floor_hour, iso, log
 
-KINDS = {
-    "tle": src_ncep.tle,
-    "nbm_prob": src_ncep.nbm_prob,
-    "multi_model": src_ncep.multi_model,
-    "openmeteo_ens": src_web.openmeteo_ens,
-    "openmeteo_det": src_web.openmeteo_det,
-    "nws_grid": src_web.nws_grid,
-}
-VARS = ("spd", "dir", "gst", "rh", "t", "sky", "p30", "l30", "l10", "vis")
+KINDS = {"tle": src_ncep.tle, "multi_model": src_ncep.multi_model, "nbm_prob": src_ncep.nbm_prob,
+         "nbm_qmd": src_ncep.nbm_qmd, "mos": src_mos.mos, "ensprob": src_ncep.ensprob,
+         "hrrr_profile": src_ncep.hrrr_profile,
+         "openmeteo_ens": src_web.openmeteo_ens, "openmeteo_det": src_web.openmeteo_det}
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
-def _round(var, x):
-    if x is None:
-        return None
-    if var == "p30":
-        return int(x)
-    if var in ("l30", "l10", "vis"):
-        return round(float(x), 2)       # 0/1 from lightning fields, 0-1 from NBM probabilities
-    if var == "dir":
-        return round(x) % 360
-    return round(x, 1)
-
-
-def build(cfg: dict, only: set | None = None) -> dict:
+def build(cfg, only=None):
     now = int(time.time())
-    days = int(cfg["days"])
-    t_start = floor_hour(now) - 36 * 3600
-    t_end = floor_hour(now) + (days + 1) * 86400
+    t_start = floor_hour(now) - int(cfg.get("hours_back", 12)) * 3600
+    t_end = floor_hour(now) + (int(cfg["days"]) + 1) * 86400
     timeline = list(range(t_start, t_end + 1, 3600))
     idx = {t: i for i, t in enumerate(timeline)}
-    cons = cfg["constraints"]
-    radii = sorted({float(cons["precip_radius_nm"]), *map(float, cons["lightning_radii_nm"])})
-
     cache = PointCache(os.path.join(ROOT, "cache", "points.json"))
     cache.prune(now - 4 * 86400)
-    ctx = Context(now=now, lat=float(cfg["site"]["lat"]), lon=float(cfg["site"]["lon"]),
-                  t_start=t_start, t_end=t_end, cache=cache, cons=cons, radii=radii, root=ROOT,
-                  om_refresh_h=float(cfg.get("openmeteo_refresh_hours", 3)))
-
+    sites = cfg["sites"]
+    ctx = Context(now=now, lat=sites[0]["lat"], lon=sites[0]["lon"], t_start=t_start, t_end=t_end, cache=cache,
+                  cons=cfg["constraints"], root=ROOT, om_refresh_h=float(cfg.get("openmeteo_refresh_hours", 3)),
+                  sites=sites)
     sources = []
     for scfg in cfg["sources"]:
         if (only and scfg["id"] not in only) or not scfg.get("enabled", True):
@@ -68,30 +47,25 @@ def build(cfg: dict, only: set | None = None) -> dict:
             res = SourceResult({}, status="error", note=f"{type(e).__name__}: {e}"[:200])
         members = []
         for mid, series in sorted(res.members.items()):
-            v = {k: [None] * len(timeline) for k in VARS}
+            v = {}
             for t, rec in series.items():
                 i = idx.get(int(t))
                 if i is None:
                     continue
-                for k in VARS:
-                    if k in rec:
-                        v[k][i] = _round(k, rec[k])
-            v = {k: a for k, a in v.items() if any(x is not None for x in a)}
+                for k, x in rec.items():
+                    v.setdefault(k, [None] * len(timeline))[i] = round(float(x), 2) if isinstance(x, float) else x
             if v:
                 members.append({"id": mid, "v": v})
         el = round(time.time() - t0, 1)
         log.info("%-10s %-8s %3d members %6.1fs  %s", scfg["id"], res.status, len(members), el, res.note)
-        sources.append({"id": scfg["id"], "label": scfg.get("label", scfg["id"]),
-                        "family": scfg.get("family", "global"), "weight": float(scfg.get("weight", 1)),
-                        "status": res.status, "cycle": res.cycle, "note": res.note,
-                        "seconds": el, "members": members})
+        sources.append({"id": scfg["id"], "label": scfg.get("label", scfg["id"]), "family": scfg.get("family", "global"),
+                        "role": scfg.get("role", ""),
+                        "weight": float(scfg.get("weight", 1)), "status": res.status, "cycle": res.cycle,
+                        "note": res.note, "seconds": el, "members": members})
     cache.save()
-    return {"generated": iso(now), "generated_unix": now, "site": cfg["site"],
-            "runway_heading_true": cfg["runway_heading_true"], "constraints": cons,
-            "windows": cfg["windows"], "days": days,
-            "min_window_coverage": cfg.get("min_window_coverage", 0.5),
-            "fine_layout": cfg.get("fine_layout"),
-            "times": timeline, "sources": sources}
+    return {"generated": iso(now), "generated_unix": now, "display_tz": cfg["display_tz"], "days": int(cfg["days"]),
+            "window_hours": int(cfg.get("window_hours", 3)), "min_window_coverage": cfg.get("min_window_coverage", 0.5),
+            "sites": sites, "constraints": cfg["constraints"], "times": timeline, "sources": sources}
 
 
 def main(argv=None):
@@ -106,30 +80,11 @@ def main(argv=None):
     if not any(s["members"] for s in data["sources"]):
         log.error("no members from any source; keeping previous output")
         return 1
-    out = os.path.join(ROOT, "docs", "data")
-    os.makedirs(out, exist_ok=True)
-    with open(os.path.join(out, "board.json.tmp"), "w") as f:
+    out = os.path.join(ROOT, "docs", "data", "board.json")
+    with open(out + ".tmp", "w") as f:
         json.dump(data, f, separators=(",", ":"))
-    os.replace(os.path.join(out, "board.json.tmp"), os.path.join(out, "board.json"))
-    rows = windows.table(data, cfg)
-    with open(os.path.join(out, "constraints.csv"), "w", newline="") as f:
-        f.write(windows.to_csv(rows, data["generated"], cfg["site"]["display_tz"]))
-    fine = windows.table(data, cfg, layout="fine")
-    with open(os.path.join(out, "constraints_fine.csv"), "w", newline="") as f:
-        f.write(windows.to_csv(fine, data["generated"], cfg["site"]["display_tz"], with_sky=True))
-    name = (cfg.get("wind_csv") or {}).get("name", "KTTS")
-    for tag, text in (("NBM", windcsv.nbm_csv(data, (cfg.get("wind_csv") or {}).get("nbm_source", "nbm"))),
-                      ("ENS", windcsv.ens_csv(data))):
-        path = os.path.join(out, f"{name}_{tag}_wind.csv")
-        if text is None:
-            log.warning("%s wind CSV: no wind members; keeping the previous file", tag)
-            continue
-        with open(path + ".tmp", "w", newline="") as f:
-            f.write(text)
-        os.replace(path + ".tmp", path)
-        log.info("wrote %s (%d rows)", os.path.basename(path), text.count("\n") - 1)
-    log.info("wrote board.json (%.0f kB), constraints.csv (%d windows) and constraints_fine.csv (%d blocks)",
-             os.path.getsize(os.path.join(out, "board.json")) / 1024, len(rows), len(fine))
+    os.replace(out + ".tmp", out)
+    log.info("wrote board.json (%.0f kB)", os.path.getsize(out) / 1024)
     return 0
 
 

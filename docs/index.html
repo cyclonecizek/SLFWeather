@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>7-Day Constraint Probabilities</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛬</text></svg>">
+<title>Splashdown Weather</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🪂</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -41,9 +41,6 @@ h1 { margin: 0; font-size: 30px; font-weight: 700; letter-spacing: -0.01em; line
 .actions { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; padding: 12px 20px; border-bottom: 1px solid var(--rule); }
 .btn { background: var(--ink); color: var(--panel); border: 0; border-radius: 4px; padding: 7px 14px; font-weight: 600; cursor: pointer; }
 .btn.ghost { background: var(--panel); color: var(--ink); border: 1px solid var(--rule); font-weight: 500; }
-a.btn { text-decoration: none; display: inline-block; }
-.lay { color: var(--muted); font-weight: 500; display: inline-flex; align-items: center; gap: 8px; }
-.lay select { background: var(--panel); color: var(--ink); border: 1px solid var(--rule); border-radius: 4px; padding: 6px 8px; font-weight: 600; }
 .hint { color: var(--muted); }
 .banner { margin: 12px 20px 0; padding: 8px 12px; border-left: 4px solid var(--marginal); background: var(--panel); }
 .banner.bad { border-color: var(--severe); }
@@ -68,11 +65,6 @@ td.v { background: color-mix(in srgb, var(--severe) 82%, var(--panel)); color: #
 td.na { color: var(--muted); background: color-mix(in srgb, var(--rule) 40%, var(--panel)); }
 td.temp { background: color-mix(in srgb, var(--rule) 40%, var(--panel)); }
 td.past { opacity: .45; }
-td.sky { font-weight: 500; color: var(--ink); }
-table.g.fine { border-spacing: 2px 2px; }
-table.g.fine th { font-size: 12px; padding: 3px 1px; }
-table.g.fine td { min-width: 36px; padding: 7px 1px; font-size: 13px; }
-table.g.fine td.dstart, table.g.fine th.dstart { border-left: 7px solid transparent; background-clip: padding-box; }
 .legend { display: flex; flex-wrap: wrap; gap: 6px 16px; color: var(--muted); font-size: 13px; margin-top: 8px; }
 .legend i { display: inline-block; width: 12px; height: 12px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
 
@@ -104,6 +96,14 @@ canvas { display: block; width: 100%; }
 .chip.ok { color: var(--slight); border-color: currentColor; }
 .chip.partial { color: var(--marginal); border-color: currentColor; }
 .chip.error, .chip.missing { color: var(--severe); border-color: currentColor; }
+.summary { border-left: 4px solid var(--hires); padding: 4px 0 4px 14px; margin: 4px 0 16px; max-width: 78ch; }
+.summary h3 { margin: 0 0 6px; font-size: 16px; font-weight: 600; }
+.summary p { margin: 0 0 8px; line-height: 1.5; }
+.summary ul { margin: 0 0 8px; padding-left: 20px; line-height: 1.5; }
+.summary .meta { color: var(--muted); font-size: 13px; margin-top: 6px; }
+.summary .meta.warn { color: var(--severe); }
+.dt { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.dt input, .dt select { background: var(--panel); border: 1px solid var(--rule); border-radius: 4px; padding: 4px 4px; font-variant-numeric: tabular-nums; }
 .cw-in { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; margin-bottom: 10px; }
 .cw-in label { color: var(--muted); }
 .cw-in input { margin-left: 6px; background: var(--panel); border: 1px solid var(--rule); border-radius: 4px; padding: 4px 6px; }
@@ -128,62 +128,128 @@ table.cw td.bar2 { width: 34%; }
 .method { color: var(--muted); font-size: 13px; max-width: 80ch; padding: 18px 20px 32px; }
 .method p { margin: 0 0 6px; }
 .method b { color: var(--ink); font-weight: 600; }
+
+/* LLCC board additions */
+td.si { background-image: repeating-linear-gradient(135deg, rgba(255,255,255,.35) 0 3px, transparent 3px 7px); font-style: italic; }
+.legend i.si { background: var(--marginal); background-image: repeating-linear-gradient(135deg, rgba(255,255,255,.45) 0 3px, transparent 3px 7px); }
+table.g td.rowh .tag { display: inline-block; font-size: 11px; font-weight: 600; color: var(--muted); border: 1px solid var(--rule); border-radius: 8px; padding: 0 5px; margin-left: 4px; vertical-align: 1px; }
+table.g tr.overall td { border-top: 2px solid var(--ink); }
+table.g tr.overall td.p { font-size: 15px; }
+table.g th.hr { font-weight: 500; color: var(--muted); font-size: 12px; min-width: 50px; white-space: nowrap; }
+table.g th.day.past, table.g th.hr.past { opacity: .45; }
+.seg.pad { margin: 0; }
+
+:root { --sgo: #1c7fa6; --mos: #a8642a; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --sgo: #3aa7d1; --mos: #d08a4a; } }
+:root[data-theme="dark"] { --sgo: #3aa7d1; }
+td.dd0 { background: color-mix(in srgb, var(--rule) 40%, var(--panel)); }
+.tile.dd0 { background: color-mix(in srgb, var(--rule) 50%, var(--panel)); }
+td.sg { background: color-mix(in srgb, var(--sgo) 80%, var(--panel)); color: #fff; }
+.tiles { display: grid; grid-template-columns: minmax(200px, 1.3fr) repeat(7, minmax(100px, 1fr)); gap: 10px; }
+@media (max-width: 900px) { .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } .tiles .wind { grid-column: 1 / -1; } }
+.tile { border-radius: 6px; padding: 10px 12px; border: 1px solid var(--rule); }
+.tile .n { font-size: 30px; font-weight: 700; line-height: 1; }
+.tile .l { font-weight: 600; margin-top: 4px; }
+.tile .x { font-size: 13px; opacity: .85; margin-top: 4px; }
+.tile.wind .n { font-size: 34px; letter-spacing: .02em; }
+.tile.sg { background: color-mix(in srgb, var(--sgo) 85%, var(--panel)); color: #fff; border-color: transparent; }
+.tile.s  { background: color-mix(in srgb, var(--slight) 85%, var(--panel)); color: #fff; border-color: transparent; }
+.tile.m  { background: color-mix(in srgb, var(--marginal) 90%, var(--panel)); color: #1b1300; border-color: transparent; }
+.tile.v  { background: color-mix(in srgb, var(--severe) 88%, var(--panel)); color: #fff; border-color: transparent; }
+.tile.na { background: color-mix(in srgb, var(--rule) 50%, var(--panel)); }
+.tile label { font-size: 12px; display: block; margin-top: 6px; opacity: .9; }
+table.cmp { width: 100%; border-collapse: separate; border-spacing: 3px; font-size: 15px; margin-top: 14px; }
+table.cmp th { font-weight: 600; text-align: center; padding: 3px 6px; color: var(--muted); font-size: 13px; }
+table.cmp td { text-align: center; padding: 7px 6px; border-radius: 3px; }
+table.cmp td.site { text-align: left; font-weight: 700; cursor: pointer; }
+table.cmp tr.cur td.site { box-shadow: inset 4px 0 0 var(--ink); }
+table.cmp tr { cursor: pointer; }
+.cmp-wrap { overflow-x: auto; }
+.charts2 { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 18px; }
+@media (max-width: 1000px) { .charts2 { grid-template-columns: minmax(0, 1fr); } }
+.chart { position: relative; }
+.chart canvas.ov { position: absolute; left: 0; bottom: 0; pointer-events: none; }
+.chart h3 { margin: 6px 0 2px; font-size: 15px; font-weight: 600; display: flex; gap: 12px; flex-wrap: wrap; align-items: baseline; }
+.chart h3 .key { font-weight: 400; color: var(--muted); font-size: 13px; display: inline-flex; gap: 12px; flex-wrap: wrap; }
+.sw { display: inline-block; width: 14px; height: 3px; vertical-align: middle; margin-right: 4px; border-radius: 1px; }
+.sw.dash { background: repeating-linear-gradient(90deg, currentColor 0 4px, transparent 4px 7px) !important; height: 2px; }
+.readout .when { font-size: 20px; font-weight: 600; line-height: 1.1; }
+.readout .when small { font-size: 14px; font-weight: 400; color: var(--muted); margin-left: 6px; }
+.readout .cat { display: inline-block; font-weight: 700; padding: 3px 10px; border-radius: 4px; margin: 8px 0 4px; color: #fff; }
+.readout table { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 6px; }
+.readout td { padding: 2px 0; }
+.readout td.v2 { text-align: right; }
 </style>
 </head>
 <body>
 <header class="top">
   <div>
-    <h1>7-Day Constraint Probabilities</h1>
+    <h1>Splashdown Weather</h1>
     <div class="where" id="where">Loading…</div>
   </div>
   <div class="fresh" id="fresh"></div>
 </header>
 <div class="actions">
-  <label class="lay">Time blocks
-    <select id="layout" aria-label="Time blocks">
-      <option value="std">Standard: 3 windows a day</option>
-      <option value="fine">Fine: 3-hr blocks days 1&ndash;5, 6-hr blocks days 6&ndash;7</option>
-    </select>
-  </label>
-  <button class="btn" id="dl" type="button">Download CSV for Excel</button>
-  <button class="btn ghost" id="copy" type="button">Copy published CSV link</button>
-  <a class="btn ghost" href="data/KTTS_NBM_wind.csv" download="KTTS_NBM_wind.csv" title="NBM alone, GSL NBM file layout">Wind CSV: NBM</a>
-  <a class="btn ghost" href="data/KTTS_ENS_wind.csv" download="KTTS_ENS_wind.csv" title="All sources blended, GSL NBM file layout">Wind CSV: ensemble</a>
-  <span class="hint" id="dlhint">The CSV uses the sources switched on below.</span>
+  <span class="hint">Site</span>
+  <div class="seg pad" id="siteSeg" role="group" aria-label="Site"></div>
+  <span class="hint">Time</span>
+  <div class="seg pad" id="tzSeg" role="group" aria-label="Time zone">
+    <button type="button" data-tz="local" aria-pressed="true">Local</button>
+    <button type="button" data-tz="zulu" aria-pressed="false">Zulu</button>
+  </div>
+  <span class="cw-in" style="margin:0">
+    <span class="dt"><span class="hint">Window start</span> <input type="date" id="cwStartD"> <select id="cwStartH" aria-label="Start hour"></select>:<select id="cwStartM" aria-label="Start minute"></select></span>
+    <span class="dt"><span class="hint">end</span> <input type="date" id="cwEndD"> <select id="cwEndH" aria-label="End hour"></select>:<select id="cwEndM" aria-label="End minute"></select></span>
+    <span class="hint" id="cwTz"></span>
+    <button class="linkbtn" type="button" id="cwClear">Clear</button>
+  </span>
 </div>
 <div id="banners"></div>
 
 <main class="wrap">
-  <section class="card" id="custom">
-    <h2>Your window</h2>
-    <div class="cw-in">
-      <label>Start <input type="datetime-local" id="cwStart" step="3600"></label>
-      <label>End <input type="datetime-local" id="cwEnd" step="3600"></label>
-      <span class="hint" id="cwTz"></span>
-      <button class="linkbtn" type="button" id="cwClear">Clear</button>
-    </div>
-    <div id="cwOut"></div>
-  </section>
   <section class="card">
-    <h2>Chance of each constraint during the window</h2>
+    <h2 id="statusTitle">Status</h2>
+    <div class="tiles" id="tiles"></div>
+    <div class="cmp-wrap"><table class="cmp" id="cmp"></table></div>
+    <p class="cw-note" id="statusNote"></p>
+  </section>
+
+  <section class="card">
+    <h2>3-hour windows</h2>
+    <p class="cw-note" id="nbmNote" style="margin:0 0 6px;color:var(--hires)"></p>
     <div class="grid-scroll"><table class="g" id="grid"></table></div>
     <div class="legend">
-      <span><i style="background:var(--slight)"></i>Slight, under 20%</span>
-      <span><i style="background:var(--marginal)"></i>Marginal, 20–50%</span>
-      <span><i style="background:var(--severe)"></i>Significant, over 50%</span>
-      <span>Select a cell for the source breakdown</span>
+      <span><i style="background:var(--sgo)"></i>Super GO</span>
+      <span><i style="background:var(--slight)"></i>GO, or weather chance under 20%</span>
+      <span><i style="background:var(--marginal)"></i>Weather chance 20–50%</span>
+      <span><i style="background:var(--severe)"></i>NO-GO, or weather chance over 50%</span>
+      <span><i class="si" style="background:var(--marginal)"></i>Stand-in, lower confidence</span>
+      <span>Wind rows show the highest hourly ensemble mean and 99th percentile in the window (kt), each colored against its own limits; the window's wind status is the worse of the two. Blocks follow the time zone chosen above. Select a cell to set it as your window.</span>
     </div>
   </section>
 
-  <div class="two">
+  <div class="charts2">
     <section class="card">
-      <h2 id="chartTitle">Hourly chance</h2>
-      <div class="seg" id="consSeg" role="group" aria-label="Constraint"></div>
-      <canvas id="chart"></canvas>
-      <div class="legend" id="chartLegend"></div>
+      <div class="chart" data-kind="wind">
+        <h3>10 m wind, every member <span class="key"><span><i class="sw" style="background:var(--line)"></i>Ensemble mean</span><span style="color:var(--severe)"><i class="sw dash"></i>99th percentile</span><span><i class="sw" style="background:var(--slight)"></i>GO limits</span><span><i class="sw" style="background:var(--sgo)"></i>Super GO limits</span></span></h3>
+        <canvas></canvas><canvas class="ov"></canvas>
+      </div>
+      <div class="chart" data-kind="ribbon"><canvas></canvas><canvas class="ov"></canvas></div>
+      <div class="chart" data-kind="wx">
+        <h3>Hourly weather chances <span class="key"><span><i class="sw" style="background:#2f7fd1"></i>Precip ≤10 nm</span><span><i class="sw" style="background:#d4a017"></i>Lightning ≤10 nm</span><span><i class="sw" style="background:#7a5bbf"></i>Ceiling &lt;500 ft</span><span style="color:#7a5bbf"><i class="sw dash"></i>Ceiling stand-in</span><span><i class="sw" style="background:#5b6875"></i>Visibility &lt;1 sm</span></span></h3>
+        <canvas></canvas><canvas class="ov"></canvas>
+      </div>
+      <div class="chart" data-kind="ml">
+        <h3>Marine layer: inversion base <span class="key"><span><i class="sw" style="background:var(--line)"></i>Median base</span><span><i class="sw" style="background:var(--global);opacity:.4;height:8px"></i>10–90% of members</span><span><i class="sw" style="background:var(--marginal)"></i>Below the setup limit</span><span>Gaps: most members have no low inversion</span></span></h3>
+        <canvas></canvas><canvas class="ov"></canvas>
+      </div>
+      <div class="chart" data-kind="dd">
+        <h3>Dew point depression <span class="key"><span><i class="sw" style="background:var(--line)"></i>Ensemble median</span><span><i class="sw" style="background:var(--global);opacity:.4;height:8px"></i>10–90% of members</span><span><i class="sw" style="background:var(--marginal)"></i>3 °C</span><span><i class="sw" style="background:var(--severe)"></i>1 °C</span></span></h3>
+        <canvas></canvas><canvas class="ov"></canvas>
+      </div>
     </section>
     <aside style="display:flex;flex-direction:column;gap:18px;min-width:0">
-      <section class="card detail" id="detail"></section>
+      <section class="card readout" id="readout" aria-live="polite"></section>
       <section class="card">
         <h2>Sources</h2>
         <div class="fams" id="fams"></div>
@@ -194,502 +260,470 @@ table.cw td.bar2 { width: 34%; }
 </main>
 
 <section class="method">
-  <p><b>Window chance.</b> A member counts as a hit if any hour it has inside the window breaks the limit. Each source's chance is its share of hits; sources are weight-averaged and the result is rounded to the nearest 5%. A member only counts if it covers at least half of the window.</p>
-  <p><b>Winds</b> use the 10 m gust with runway 15/33 at 330° true: crosswind is gust × |sin(angle)| over 10 kt, head/tail is |gust × cos(angle)| over 15 kt. <b>Precip within 30 nm</b> is 1 km reflectivity of 20 dBZ or more anywhere within 30 nm for HRRR, HREF members and NAM, and 0.01 in/hr at any of 13 sample points out to 25 nm for NBM and the global ensembles. <b>Lightning</b> uses only models with explicit lightning output: the hi-res lightning field (HRRR and any member model that carries it) anywhere within 30 and 10 nm, and NBM's 1, 3 and 6 h thunderstorm probability, taking its highest value within each radius. Global ensembles and blends without a lightning parameter don't feed the lightning rows. <b>Visibility under 200 ft</b> uses NBM's probability of visibility below its lowest threshold at the site, plus the ECMWF HRES run judged against that same threshold (the threshold is listed under Sources). That threshold is well above 200 ft, so treat the value as an upper bound. NBM carries it only for the first few days, and HRES is used over the same hours so a single run never sets the value alone. <b>High/Low</b> are the weighted median of members' 11–18L maximum and 00–11L minimum.</p>
-  <p><b>Fine time blocks.</b> The dropdown switches to 3-hour blocks for days 1–5 and 6-hour blocks for days 6–7, starting today. The rules are the same, applied to each block, so a block's chance is usually lower than the standard window that contains it: a short block has fewer hours in which a member can break a limit. High/Low keep the standard definitions (the 00–11L minimum and 11–18L maximum) and span the blocks they cover. <b>Sky cover</b> (fine layout) is each member's average cloud cover over the block; the value is the weighted median across NBM, NDFD and the global ensembles, rounded to the nearest 5%.</p>
+  <p><b>Wind.</b> When NBM is the only wind source switched on, the mean and 99th percentile come straight from NBM's own quantile-mapped wind distribution. Otherwise, each hour, every member's 10 m wind at the site is pooled, with each source's weight split across its members. <b>Super GO</b> needs the ensemble mean at or below 7.25 kt and the 99th percentile at or below 10.0 kt; <b>GO</b> needs at or below 7.75 kt and 11.5 kt; anything else is <b>NO-GO</b>. A window takes its worst hour.</p>
+  <p><b>Ceiling and visibility sources.</b> Direct guidance comes from the hi-res models' own ceiling and visibility, REFS and HREF ensemble probabilities, NBM probabilities, and GFS MOS and LAMP. Where none of these covers a window (mostly beyond about 3 days), the ceiling row falls back to a stand-in from the global ensembles: a member counts when the cloud base of lifted surface air (about 125 m per °C of dew point depression) is below 500 ft and low cloud cover is at least 70% (when the model provides it). Stand-in cells are hatched.</p>
+  <p><b>Marine layer setup</b> (awareness only, not a constraint) finds the lowest temperature inversion above each site in every member that has a temperature profile: HRRR at 25 mb steps from 1000 to 850 mb, and the global ensembles at the pressure levels Open-Meteo provides. A member counts when the inversion base is at or below 500 m, it warms at least 3 °C across the inversion, and the air under it is moist (2 m dew point depression of 2.5 °C or less, or 1000 mb humidity of 90% or more). The chart shows the median inversion base; limits are in config.yaml.</p>
+  <p><b>Dew point depression</b> (2 m temperature minus dew point, °C) is shown for awareness of fog and low visibility potential and does not count toward GO/NO-GO. It is the weighted median across every model and MOS member; a window shows its lowest hourly median. Yellow is within 3 °C, red within 1 °C.</p>
+  <p><b>Weather.</b> Each value is the chance a member meets the condition at some hour in the window, weight-averaged across sources and rounded to 5%. Precipitation counts anywhere within 10 nm: 1 km reflectivity of 20 dBZ or more for the hi-res models, 0.01 in/hr at the site or a 10 nm ring for the global ensembles, and NBM's 1-hour precipitation probability. Lightning counts within 10 nm and uses only explicit lightning output: the hi-res lightning field and NBM thunderstorm probability. Ceiling below 500 ft and visibility below 1 statute mile are at the site, from the hi-res models and NBM probabilities (at NBM's nearest thresholds, listed under Sources), plus GFS MOS and LAMP at the nearest near-sea-level station with guidance (listed under Sources). MOS gives a best-category forecast rather than a probability, so each of its two latest runs counts as one member. "Any weather" counts a member once if it meets any checked condition, and is never below the lightning, ceiling or visibility rows, which only a few sources provide.</p>
 </section>
 
 <script>
 (() => {
 "use strict";
-const DATA_URL = "data/board.json";
-const CSV_URLS = { std: "data/constraints.csv", fine: "data/constraints_fine.csv" };
-const CSV_FILES = { std: "Constraint_Plume.csv", fine: "Constraint_Plume_Fine.csv" };
-const REFRESH_MS = 10 * 60 * 1000, STALE_MIN = 90;
-const ROWS = [
-  { col: "precip30", v: "p30", name: "Precipitation", sub: "within 30 nm" },
-  { col: "ltng30", v: "l30", name: "Lightning", sub: "within 30 nm" },
-  { col: "ltng10", v: "l10", name: "Lightning potential", sub: "within 10 nm" },
-  { col: "xwind", v: "xw", name: "Crosswinds", sub: "> 10 kt" },
-  { col: "headtail", v: "ht", name: "Head/Tailwinds", sub: "> 15 kt" },
-  { col: "vis200", v: "vis", name: "Visibility", sub: "< 200 ft" },
-  { col: "rh98", v: "rhx", name: "Relative humidity", sub: "> 98%" },
+const DATA_URL = "data/board.json", REFRESH_MS = 10 * 60 * 1000, STALE_MIN = 90;
+const WX = [
+  { k: "p", name: "Precip", sub: "within 10 nm", color: "#2f7fd1" },
+  { k: "l", name: "Lightning", sub: "within 10 nm", color: "#d4a017" },
+  { k: "c", name: "Ceiling", sub: "below 500 ft", color: "#7a5bbf" },
+  { k: "v", name: "Visibility", sub: "below 1 sm", color: "#5b6875" },
 ];
-// Rows only a few sources can judge (lightning fields, NBM probabilities). For "any" they are
-// applied as a floor rather than required of every member.
-const LTNG = new Set(["l30", "l10", "vis"]);
-const FAMS = [["hires", "All hi-res"], ["blend", "All blends"], ["global", "All global ens"]];
+const SPARSE = new Set(["l", "c", "v"]);
+const FAMS = [["hires", "All hi-res"], ["blend", "All blends"], ["mos", "All MOS"], ["global", "All global ens"]];
+const CAT = ["SUPER GO", "GO", "NO-GO"], CATC = ["sg", "s", "v"];
+const M = { l: 44, r: 12 };
 const $ = s => document.querySelector(s);
-const state = { data: null, enabled: {}, rows: [], sel: null, layout: "std", cons: "p30", hourly: null,
-  cw: { a: null, b: null }, cwInc: new Set(["p30", "l30", "l10", "xw", "ht", "vis", "rhx"]) };
-const store = {
-  get(k) { try { return localStorage.getItem(k); } catch { return null; } },
-  set(k, v) { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch {} }
-};
+const state = { ml: {}, dd: {}, data: null, site: null, enabled: {}, cw: { a: null, b: null }, inc: new Set(["p", "l", "c", "v"]), hover: null, hourly: {}, cols: [] };
+const store = { get(k) { try { return localStorage.getItem(k); } catch { return null; } }, set(k, v) { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch {} } };
 const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
-function alpha(hex, a) { const n = parseInt(hex.replace("#", ""), 16); return `rgba(${n >> 16 & 255},${n >> 8 & 255},${n & 255},${a})`; }
+const alpha = (hex, a) => { const n = parseInt(hex.replace("#", ""), 16); return `rgba(${n >> 16 & 255},${n >> 8 & 255},${n & 255},${a})`; };
 
-// ---------- time zone helpers
-let TZ = "America/New_York";
+// ---------- time
+let TZ = "America/Los_Angeles", LOCAL_TZ = TZ, ZULU = false;
+const tzName = p => ZULU ? "Z" : p.timeZoneName;
+const tzSuffix = () => ZULU ? "Z" : "L";
 function parts(ms) {
-  const f = new Intl.DateTimeFormat("en-US", { timeZone: TZ, hourCycle: "h23", year: "numeric", month: "2-digit", day: "2-digit",
-    hour: "2-digit", minute: "2-digit", weekday: "short", timeZoneName: "short" });
+  const f = new Intl.DateTimeFormat("en-US", { timeZone: TZ, hourCycle: "h23", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", weekday: "short", timeZoneName: "short" });
   return Object.fromEntries(f.formatToParts(new Date(ms)).map(p => [p.type, p.value]));
 }
-function zonedToUtc(y, mo, d, h) {
-  const want = Date.UTC(y, mo - 1, d, h); let g = want;
-  for (let k = 0; k < 3; k++) { const p = parts(g); g += want - Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute); }
-  return g;
-}
+function zonedToUtc(y, mo, d, h, mi = 0) { const want = Date.UTC(y, mo - 1, d, h, mi); let g = want; for (let k = 0; k < 3; k++) { const p = parts(g); g += want - Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute); } return g; }
+const toLocalInput = ms => { const p = parts(ms); return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}`; };
+const fromLocalInput = s => { const [d, t] = s.split("T"); const [y, mo, dd] = d.split("-").map(Number); const [h, mi] = t.split(":").map(Number); return zonedToUtc(y, mo, dd, h, mi) / 1000; };
+const zHour = ms => String(new Date(ms).getUTCHours()).padStart(2, "0") + "Z";
+const local = ms => { const p = parts(ms); return ZULU ? `${p.weekday} ${p.hour}${p.minute}Z` : `${p.weekday} ${p.hour}:${p.minute} ${p.timeZoneName}`; };
 
-// ---------- window math (mirror of pipeline/windows.py)
-const THREE_H = [0, 3, 6, 9, 12, 15, 18, 21].map(h => [h, h + 3]), SIX_H = [0, 6, 12, 18].map(h => [h, h + 6]);
-function windowList(d, layout) {
-  const fine = layout === "fine", fl = d.fine_layout || { three_hour_days: 5, six_hour_days: 2 };
-  const [lo, hi] = d.windows, p = parts(d.generated_unix * 1000);
-  const nDays = fine ? fl.three_hour_days + fl.six_hour_days : d.days + 1;
-  const base = new Date(Date.UTC(+p.year, +p.month - 1, +p.day - (fine ? 0 : 1)));
-  const endOf = (y, mo, dd, h) => h === 24 ? zonedToUtc(y, mo, dd + 1, 0) / 1000 : zonedToUtc(y, mo, dd, h) / 1000;
-  const out = [];
-  for (let k = 0; k < nDays; k++) {
-    const day = new Date(base.getTime() + k * 864e5), y = day.getUTCFullYear(), mo = day.getUTCMonth() + 1, dd = day.getUTCDate();
-    const spans = fine ? (k < fl.three_hour_days ? THREE_H : SIX_H) : d.windows, first = {};
-    spans.forEach(([h0, h1], wi) => {
-      const a = zonedToUtc(y, mo, dd, h0) / 1000, bb = endOf(y, mo, dd, h1);
-      const date = `${y}-${String(mo).padStart(2, "0")}-${String(dd).padStart(2, "0")}`;
-      let grp, tl = null;
-      if (!fine) { grp = wi === 0 ? "low" : wi === 1 ? "high" : "rest"; tl = wi === 0 ? "low" : wi === 1 ? "high" : null; }
-      else {
-        grp = h0 < lo[1] ? "low" : h0 < hi[1] ? "high" : "rest";
-        if (grp !== "rest" && !(grp in first)) { first[grp] = wi; tl = grp; }
-      }
-      const sp = tl === "high" ? hi : lo;     // temperature span: std = the window itself, fine = the std Low / High window
-      out.push({ key: Number(`${y}${String(mo).padStart(2, "0")}${String(dd).padStart(2, "0")}${String(h0).padStart(2, "0")}`),
-        date, w: wi + 1, label: `${String(h0).padStart(2, "0")}-${String(h1).padStart(2, "0")}L`, a, b: bb, day: fine ? k : null, h0, grp, tl,
-        ta: fine && tl ? zonedToUtc(y, mo, dd, sp[0]) / 1000 : a, tb: fine && tl ? endOf(y, mo, dd, sp[1]) : bb });
-    });
+// ---------- wind statistics (ensemble mean and 99th percentile each hour)
+function wq(pairs, q) {
+  pairs.sort((a, b) => a[0] - b[0]); const W = pairs.reduce((s, p) => s + p[1], 0); let c = 0;
+  for (const [v, w] of pairs) { c += w; if (c >= q * W - 1e-9) return v; } return pairs[pairs.length - 1][0];
+}
+function category(mean, p99) {
+  const C = state.data.constraints;
+  if (mean == null) return null;
+  if (mean <= C.super_go.mean_kt && p99 <= C.super_go.p99_kt) return 0;
+  if (mean <= C.go.mean_kt && p99 <= C.go.p99_kt) return 1;
+  return 2;
+}
+// NBM-only mode: when the only wind sources switched on are NBM's, use NBM's own wind
+// distribution (quantile-mapped mean and 99th percentile) instead of pooling members.
+function nbmPctSource(site) {
+  const d = state.data, key = "w@" + site;
+  const q = d.sources.find(s => s.role === "nbm_pct" && state.enabled[s.id] && s.members.some(m => m.v["w99@" + site]));
+  if (!q) return null;
+  const wind = d.sources.filter(s => state.enabled[s.id] && s.members.some(m => m.v[key]));
+  return wind.every(s => s.family === "blend") ? q : null;
+}
+function hourlyWind(site) {
+  const d = state.data, key = "w@" + site, T = d.times.length, out = [];
+  const q = nbmPctSource(site);
+  state.windMode = state.windMode || {}; state.windMode[site] = q ? "nbm" : "pool";
+  if (q) {
+    const wm = q.members[0].v["wm@" + site], w99 = q.members[0].v["w99@" + site];
+    for (let i = 0; i < T; i++) {
+      if (!w99 || w99[i] == null) { out.push(null); continue; }
+      const mean = wm && wm[i] != null ? wm[i] : null;
+      if (mean == null) { out.push(null); continue; }
+      out.push({ mean, p99: w99[i], p10: null, p90: null, n: 1, per: { [q.id]: mean }, cat: category(mean, w99[i]), nbm: true });
+    }
+    return out;
+  }
+  for (let i = 0; i < T; i++) {
+    const pairs = []; let n = 0; const per = {};
+    for (const s of d.sources) {
+      if (!state.enabled[s.id]) continue;
+      const v = s.members.map(m => m.v[key] ? m.v[key][i] : null).filter(x => x != null);
+      if (!v.length) continue;
+      v.forEach(x => pairs.push([x, s.weight / v.length])); n += v.length;
+      per[s.id] = v.reduce((a, b) => a + b, 0) / v.length;
+    }
+    if (!pairs.length) { out.push(null); continue; }
+    const W = pairs.reduce((s, p) => s + p[1], 0), mean = pairs.reduce((s, p) => s + p[0] * p[1], 0) / W;
+    out.push({ mean, p99: wq(pairs, .99), p10: wq(pairs, .1), p90: wq(pairs, .9), n, per, cat: category(mean, wq(pairs, .99)) });
   }
   return out;
 }
-function exceed(v, vals, i, C, rwy) {
-  if (v === "p30") { const a = vals[v]; return a == null || a[i] == null ? null : +(a[i] >= 1); }
-  if (v === "l30" || v === "l10" || v === "vis") { const a = vals[v]; return a == null || a[i] == null ? null : +a[i]; }   // 0/1 lightning field, 0-1 NBM probability
-  if (v === "rhx") { const a = vals.rh; return a == null || a[i] == null ? null : +(a[i] > C.rh_pct); }
-  const g = vals.gst, d = vals.dir;
-  if (!g || !d || g[i] == null || d[i] == null) return null;
-  const r = (d[i] - rwy) * Math.PI / 180;
-  return v === "xw" ? +(g[i] * Math.abs(Math.sin(r)) > C.crosswind_kt) : +(Math.abs(g[i] * Math.cos(r)) > C.headtail_kt);
-}
-const baseVar = v => v === "xw" || v === "ht" ? "gst" : v === "rhx" ? "rh" : v;
-function stepHours(times, arr) {
-  const idx = []; arr.forEach((x, i) => { if (x != null) idx.push(times[i]); });
-  if (idx.length < 2) return 1;
-  const gaps = idx.slice(1).map((t, i) => (t - idx[i]) / 3600).sort((a, b) => a - b);
-  return Math.min(6, Math.max(1, gaps[Math.floor(gaps.length / 2)]));
-}
-function wmedian(pairs) {
-  if (!pairs.length) return null;
-  pairs.sort((a, b) => a[0] - b[0]); const tot = pairs.reduce((s, p) => s + p[1], 0); let c = 0;
-  for (const [v, w] of pairs) { c += w; if (c >= tot / 2 - 1e-9) return v; }
-  return pairs[pairs.length - 1][0];
-}
-function prepSteps(d) {
-  for (const s of d.sources) for (const m of s.members) {
-    m.step = {};
-    for (const v of ["gst", "rh", "p30", "l30", "l10", "vis", "t", "sky"]) m.step[v] = m.v[v] ? stepHours(d.times, m.v[v]) : 1;
+function hourlyDD(site) {
+  const d = state.data, key = "dd@" + site, T = d.times.length, out = [];
+  for (let i = 0; i < T; i++) {
+    const pairs = [];
+    for (const s of d.sources) {
+      if (!state.enabled[s.id]) continue;
+      const v = s.members.map(m => m.v[key] ? m.v[key][i] : null).filter(x => x != null);
+      v.forEach(x => pairs.push([x, s.weight / v.length]));
+    }
+    out.push(pairs.length ? { med: wq(pairs, .5), p10: wq(pairs, .1), p90: wq(pairs, .9), n: pairs.length } : null);
   }
+  return out;
 }
-function windowTable() {
-  const d = state.data, C = d.constraints, rwy = d.runway_heading_true, cov = d.min_window_coverage ?? 0.5;
-  const tindex = new Map(d.times.map((t, i) => [t, i]));
-  const srcs = d.sources.filter(s => s.members.length && state.enabled[s.id]);
-  return windowList(d, state.layout).map(W => {
-    const hours = []; for (let t = W.a; t < W.b; t += 3600) if (tindex.has(t)) hours.push(tindex.get(t));
-    const nh = (W.b - W.a) / 3600, row = { ...W, per: {}, used: new Set() };
-    for (const R of ROWS) {
-      if (!R.v) { row[R.col] = null; continue; }
-      let num = 0, den = 0; const per = {};
-      for (const s of srcs) {
-        let hit = 0, n = 0;
-        for (const m of s.members) {
-          const vals = hours.map(i => exceed(R.v, m.v, i, C, rwy)).filter(x => x != null);
-          const need = Math.max(1, Math.floor(cov * nh / m.step[baseVar(R.v)]));
-          if (vals.length >= need) { n++; hit += Math.max(...vals); }
-        }
-        if (n) { num += s.weight * hit / n; den += s.weight; per[s.id] = { p: hit / n, n }; row.used.add(s.id); }
+function hourlyML(site) {
+  const d = state.data, T = d.times.length, out = [];
+  for (let i = 0; i < T; i++) {
+    const base = [], str = []; let num = 0, den = 0;
+    for (const s of d.sources) {
+      if (!state.enabled[s.id]) continue;
+      const ms = s.members.filter(m => m.v["ml@" + site] && m.v["ml@" + site][i] != null);
+      if (!ms.length) continue;
+      const w = s.weight / ms.length;
+      num += s.weight * ms.filter(m => m.v["ml@" + site][i]).length / ms.length; den += s.weight;
+      for (const m of ms) {
+        const b = m.v["mlb@" + site]?.[i], st = m.v["mls@" + site]?.[i];
+        base.push([b == null ? 9999 : b, w]);          // no inversion counts as "very deep"
+        if (st != null) str.push([st, w]);
       }
-      row[R.col] = den ? Math.round(100 * num / den / 5) * 5 : null;
-      row.per[R.col] = per;
     }
-    for (const [col, want, fn] of [["low_f", "low", Math.min], ["high_f", "high", Math.max]]) {
-      row[col] = null; if (W.tl !== want) continue;
-      const th = []; for (let t = W.ta; t < W.tb; t += 3600) if (tindex.has(t)) th.push(tindex.get(t));
-      const tnh = (W.tb - W.ta) / 3600, pairs = [];
-      for (const s of srcs) {
-        const vm = [];
-        for (const m of s.members) {
-          const t = m.v.t; if (!t) continue;
-          const v = th.map(i => t[i]).filter(x => x != null);
-          if (v.length >= Math.max(1, Math.floor(cov * tnh / m.step.t))) vm.push(fn(...v));
-        }
-        vm.forEach(v => pairs.push([v, s.weight / vm.length]));
-      }
-      const med = wmedian(pairs); row[col] = med == null ? null : Math.round(med);
-    }
-    {                                            // sky cover: weighted median of members' mean cloud cover, nearest 5 %
-      const pairs = [];
-      for (const s of srcs) {
-        const vm = [];
-        for (const m of s.members) {
-          const a = m.v.sky; if (!a) continue;
-          const v = hours.map(i => a[i]).filter(x => x != null);
-          if (v.length >= Math.max(1, Math.floor(cov * nh / m.step.sky))) { let acc = 0; for (const x of v) acc += x; vm.push(acc / v.length); }
-        }
-        vm.forEach(x => pairs.push([x, s.weight / vm.length]));
-      }
-      const med = wmedian(pairs); row.sky = med == null ? null : Math.floor(med / 5 + 0.5) * 5;
-    }
-    row.sources = row.used.size;
-    return row;
-  });
+    out.push(den ? { p: num / den, b50: wq(base, .5), b10: wq(base, .1), b90: wq(base, .9), s50: str.length ? wq(str, .5) : null } : null);
+  }
+  return out;
 }
-
-// ---------- custom window: each constraint plus the chance of breaking ANY of them
-function customStats(a, b) {
-  const d = state.data, C = d.constraints, rwy = d.runway_heading_true, cov = d.min_window_coverage ?? 0.5;
-  const tindex = new Map(d.times.map((t, i) => [t, i]));
-  const hours = []; for (let t = Math.floor(a / 3600) * 3600; t < b; t += 3600) if (tindex.has(t)) hours.push(tindex.get(t));
-  const nh = Math.max(1, (b - Math.floor(a / 3600) * 3600) / 3600);
-  const cons = ROWS.filter(R => R.v).map(R => R.v), inc = [...state.cwInc];
-  const res = {}; for (const v of cons) res[v] = { num: 0, den: 0, per: {} };
-  const any = { num: 0, den: 0, per: {} };
+const ddLvl = v => { const C = state.data.constraints; return v == null ? null : v <= (C.dd_warning_c ?? 1) ? 2 : v <= (C.dd_caution_c ?? 3) ? 1 : 0; };
+const DDC = ["dd0", "m", "v"];
+function stepHours(times, a) {
+  const idx = []; a.forEach((x, i) => { if (x != null) idx.push(times[i]); });
+  if (idx.length < 2) return 1;
+  const g = idx.slice(1).map((t, i) => (t - idx[i]) / 3600).sort((x, y) => x - y);
+  return Math.min(6, Math.max(1, g[Math.floor(g.length / 2)]));
+}
+function step(m, key) { m._st = m._st || {}; if (!(key in m._st)) m._st[key] = m.v[key] ? stepHours(state.data.times, m.v[key]) : 1; return m._st[key]; }
+const r5 = x => Math.floor(100 * x / 5 + 0.5) * 5;
+// Window: worst wind hour + weather chances for one site over [a, b).
+function evaluate(site, a, b) {
+  const d = state.data, cov = d.min_window_coverage ?? 0.5, t0 = Math.floor(a / 3600) * 3600, nh = Math.max(1, (b - t0) / 3600);
+  const hours = []; for (let t = t0; t < b; t += 3600) if (state.tindex.has(t)) hours.push(state.tindex.get(t));
+  const hw = state.hourly[site] || (state.hourly[site] = hourlyWind(site));
+  let mean = null, p99 = null;
+  for (const i of hours) { const h = hw[i]; if (!h) continue; mean = Math.max(mean ?? -1, h.mean); p99 = Math.max(p99 ?? -1, h.p99); }
+  const out = { hours: hours.length, mean, p99, cat: mean == null ? null : category(mean, p99), wx: {}, any: null, dd: null };
+  const hd = state.dd[site] || (state.dd[site] = hourlyDD(site));
+  for (const i of hours) if (hd[i]) out.dd = Math.min(out.dd ?? 99, hd[i].med);
+  const inc = [...state.inc], need = inc.filter(k => !SPARSE.has(k));
+  const acc = {}; for (const W of WX) acc[W.k] = { num: 0, den: 0, per: {} };
+  acc.cs = { num: 0, den: 0, per: {} };          // global-ensemble ceiling stand-in
+  acc.ml = { num: 0, den: 0, per: {} };          // marine layer setup (awareness only)
+  const any = { num: 0, den: 0 };
   for (const s of d.sources) {
     if (!s.members.length || !state.enabled[s.id]) continue;
-    const cnt = {}; for (const v of cons) cnt[v] = { hit: 0, n: 0 };
+    const cnt = {}; for (const W of WX) cnt[W.k] = { hit: 0, n: 0 };
     let aHit = 0, aN = 0;
     for (const m of s.members) {
       const judged = {};
-      for (const v of cons) {
-        const vals = hours.map(i => exceed(v, m.v, i, C, rwy)).filter(x => x != null);
-        const need = Math.max(1, Math.floor(cov * nh / m.step[baseVar(v)]));
-        if (vals.length >= need) { judged[v] = Math.max(...vals); cnt[v].n++; cnt[v].hit += judged[v]; }
+      for (const W of WX) {
+        const key = `${W.k}@${site}`, x = m.v[key]; if (!x) continue;
+        const vals = hours.map(i => x[i]).filter(v => v != null);
+        if (vals.length >= Math.max(1, Math.floor(cov * nh / step(m, key)))) { judged[W.k] = Math.max(...vals); cnt[W.k].n++; cnt[W.k].hit += judged[W.k]; }
       }
-      // a member speaks for ANY if it can judge every checked non-lightning constraint;
-      // lightning it can judge is included, lightning it can't is handled after the loop
-      const need = inc.filter(v => !LTNG.has(v)), have = inc.filter(v => v in judged);
-      if (have.length && need.every(v => v in judged)) { aN++; aHit += Math.max(...have.map(v => judged[v])); }
+      const have = inc.filter(k => k in judged);
+      if (have.length && need.every(k => k in judged)) { aN++; aHit += Math.max(...have.map(k => judged[k])); }
     }
-    for (const v of cons) if (cnt[v].n) {
-      const f = cnt[v].hit / cnt[v].n;
-      res[v].num += s.weight * f; res[v].den += s.weight; res[v].per[s.id] = { p: f, n: cnt[v].n };
-    }
-    if (aN) { const f = aHit / aN; any.num += s.weight * f; any.den += s.weight; any.per[s.id] = { p: f, n: aN }; }
+    for (const W of WX) if (cnt[W.k].n) { const f = cnt[W.k].hit / cnt[W.k].n; acc[W.k].num += s.weight * f; acc[W.k].den += s.weight; acc[W.k].per[s.id] = f; }
+    for (const extra of ["ml"]) { let hit = 0, n = 0; const key = extra + "@" + site;
+      for (const m of s.members) { const x = m.v[key]; if (!x) continue; const vals = hours.map(i => x[i]).filter(v => v != null);
+        if (vals.length >= Math.max(1, Math.floor(cov * nh / step(m, key)))) { n++; hit += Math.max(...vals); } }
+      if (n) { acc[extra].num += s.weight * hit / n; acc[extra].den += s.weight; acc[extra].per[s.id] = hit / n; } }
+    { let hit = 0, n = 0; const key = "cs@" + site;
+      for (const m of s.members) { const x = m.v[key]; if (!x) continue; const vals = hours.map(i => x[i]).filter(v => v != null);
+        if (vals.length >= Math.max(1, Math.floor(cov * nh / step(m, key)))) { n++; hit += Math.max(...vals); } }
+      if (n) { acc.cs.num += s.weight * hit / n; acc.cs.den += s.weight; acc.cs.per[s.id] = hit / n; } }
+    if (aN) { any.num += s.weight * aHit / aN; any.den += s.weight; }
   }
-  const pct = x => x.den ? Math.floor(100 * x.num / x.den / 5 + 0.5) * 5 : null;
-  const consOut = Object.fromEntries(cons.map(v => [v, { p: pct(res[v]), per: res[v].per }]));
-  // Lightning and visibility come from only a few sources, so ANY is at least the chance of
-  // each checked lightning or visibility row.
-  let anyP = pct(any);
-  for (const v of inc) if (LTNG.has(v) && consOut[v].p != null) anyP = Math.max(anyP ?? 0, consOut[v].p);
-  return { hours: hours.length, cons: consOut, any: { p: anyP, per: any.per } };
+  for (const W of WX) out.wx[W.k] = acc[W.k].den ? r5(acc[W.k].num / acc[W.k].den) : null;
+  out.si = {};
+  out.ml = acc.ml.den ? r5(acc.ml.num / acc.ml.den) : null;
+  if (out.wx.c == null && acc.cs.den) { out.wx.c = r5(acc.cs.num / acc.cs.den); out.si.c = true; }   // stand-in, lower confidence
+  let p = any.den ? r5(any.num / any.den) : null;
+  for (const k of inc) if (SPARSE.has(k) && out.wx[k] != null) p = Math.max(p ?? 0, out.wx[k]);
+  out.any = p;
+  return out;
 }
-function toLocalInput(ms) { const p = parts(ms); return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}`; }
-function fromLocalInput(str) {
-  const [d, t] = str.split("T"); const [y, mo, dd] = d.split("-").map(Number); const [h, mi] = t.split(":").map(Number);
-  return zonedToUtc(y, mo, dd, h) / 1000 + mi * 60;
+const wcls = v => v == null ? "na" : v < 20 ? "s" : v <= 50 ? "m" : "v";
+
+// ---------- status card (your window, or the next 3 hours)
+function activeWindow() {
+  if (state.cw.a != null && state.cw.b > state.cw.a) return { a: state.cw.a, b: state.cw.b, custom: true };
+  const a = Math.floor(Date.now() / 3600e3) * 3600; return { a, b: a + 3 * 3600, custom: false };
 }
-function setCustom(a, b, save = true) {
-  state.cw = { a, b };
-  $("#cwStart").value = a != null ? toLocalInput(a * 1000) : "";
-  $("#cwEnd").value = b != null ? toLocalInput(b * 1000) : "";
-  if (save) {
-    const u = new URL(location.href);
-    const z = x => new Date(x * 1000).toISOString().slice(0, 16) + "Z";
-    u.hash = a != null && b != null ? `start=${z(a)}&end=${z(b)}` : "";
-    history.replaceState(null, "", u);
-    store.set("board.cw", a != null && b != null ? JSON.stringify(state.cw) : null);
+function status() {
+  const W = activeWindow(), ev = evaluate(state.site, W.a, W.b), C = state.data.constraints;
+  $("#statusTitle").textContent = W.custom ? `Your window: ${local(W.a * 1000)} to ${local(W.b * 1000)}` : "Next 3 hours";
+  if (!ev.hours) { $("#tiles").innerHTML = ""; $("#statusNote").textContent = "No forecast data covers that window."; $("#cmp").innerHTML = ""; return; }
+  let h = `<div class="tile wind ${ev.cat == null ? "na" : CATC[ev.cat]}"><div class="n">${ev.cat == null ? "–" : CAT[ev.cat]}</div>
+    <div class="l">Wind at ${state.site}${state.windMode?.[state.site] === "nbm" ? ", NBM distribution" : ""}</div><div class="x">Highest hourly mean ${ev.mean?.toFixed(1) ?? "–"} kt, 99th percentile ${ev.p99?.toFixed(1) ?? "–"} kt<br>GO ≤ ${C.go.mean_kt} / ${C.go.p99_kt} kt, Super GO ≤ ${C.super_go.mean_kt} / ${C.super_go.p99_kt} kt</div></div>`;
+  for (const X of WX) {
+    const v = ev.wx[X.k];
+    h += `<div class="tile ${wcls(v)}"><div class="n">${v == null ? "–" : v + "%"}</div><div class="l">${X.name}</div><div class="x">${X.sub}${ev.si?.[X.k] ? ", stand-in (lower confidence)" : ""}</div>
+      <label><input type="checkbox" data-k="${X.k}" ${state.inc.has(X.k) ? "checked" : ""}> in "any weather"</label></div>`;
   }
-}
-function custom() {
-  const el = $("#cwOut"), { a, b } = state.cw, d = state.data;
-  $("#cwTz").textContent = parts(Date.now()).timeZoneName;
-  if (a == null || b == null) { el.innerHTML = `<p class="cw-note">Enter a start and end time to get the chance of breaking each constraint, and of breaking any of them, during that window.</p>`; return; }
-  if (b <= a) { el.innerHTML = `<p class="cw-note" style="color:var(--severe)">End must be after start.</p>`; return; }
-  const st = customStats(a, b);
-  if (!st.hours) { el.innerHTML = `<p class="cw-note">No forecast data covers that window. The data runs to ${new Date(d.times[d.times.length - 1] * 1000).toLocaleDateString("en-US", { timeZone: TZ, month: "numeric", day: "numeric" })}.</p>`; return; }
-  const hrs = Math.round((b - a) / 3600), n = Object.keys(st.any.per).length;
-  const names = st.any.p == null ? "" : d.sources.filter(s => st.any.per[s.id]).map(s => s.label);
-  const left = `<div class="anybox ${cls(st.any.p)}"><div class="n">${st.any.p == null ? "–" : st.any.p + "%"}</div>
-    <div class="l">Chance of breaking any checked constraint</div>
-    <div class="x">${hrs} h window, members from ${n} source${n === 1 ? "" : "s"}</div></div>`;
-  let rows = "";
-  for (const R of ROWS) {
-    if (!R.v) { rows += `<tr><td>${R.name} ${R.sub}</td><td class="pv na">–</td><td class="bar2"></td><td class="inc">no guidance</td></tr>`; continue; }
-    const c = st.cons[R.v], on = state.cwInc.has(R.v);
-    rows += `<tr><td>${R.name} ${R.sub}</td><td class="pv ${cls(c.p)}">${c.p == null ? "–" : c.p + "%"}</td>
-      <td class="bar2"><div class="bar"><i style="width:${c.p ?? 0}%"></i></div></td>
-      <td class="inc"><label><input type="checkbox" data-v="${R.v}" ${on ? "checked" : ""}> in "any"</label></td></tr>`;
+  h += `<div class="tile ${wcls(ev.any)}"><div class="n">${ev.any == null ? "–" : ev.any + "%"}</div><div class="l">Any weather</div><div class="x">checked conditions</div></div>`;
+  h += `<div class="tile ${wcls(ev.ml)}"><div class="n">${ev.ml == null ? "–" : ev.ml + "%"}</div><div class="l">Marine layer setup</div><div class="x">shallow, strong inversion over moist air; awareness only</div></div>`;
+  { const l = ddLvl(ev.dd); h += `<div class="tile ${l == null ? "na" : DDC[l]}"><div class="n">${ev.dd == null ? "–" : ev.dd.toFixed(1) + "°C"}</div><div class="l">Dew point depression</div><div class="x">lowest in window, ensemble median; awareness only</div></div>`; }
+  $("#tiles").innerHTML = h;
+  $("#tiles").querySelectorAll("input").forEach(cb => cb.addEventListener("change", () => {
+    cb.checked ? state.inc.add(cb.dataset.k) : state.inc.delete(cb.dataset.k); store.set("sd.inc", JSON.stringify([...state.inc])); refreshViews(); }));
+  // site comparison
+  let t = `<tr><th></th><th>Wind</th><th>Mean / p99 (kt)</th>${WX.map(X => `<th>${X.name}</th>`).join("")}<th>Any weather</th><th>Marine layer</th><th>T−Td (°C)</th></tr>`;
+  for (const s of state.data.sites) {
+    const e = evaluate(s.id, W.a, W.b);
+    t += `<tr data-s="${s.id}" class="${s.id === state.site ? "cur" : ""}"><td class="site">${s.label}</td>
+      <td class="${e.cat == null ? "na" : CATC[e.cat]}">${e.cat == null ? "–" : CAT[e.cat]}</td>
+      <td class="pv">${e.mean == null ? "–" : e.mean.toFixed(1) + " / " + e.p99.toFixed(1)}</td>
+      ${WX.map(X => `<td class="${wcls(e.wx[X.k])}${e.si?.[X.k] ? " si" : ""}">${e.wx[X.k] == null ? "–" : e.wx[X.k] + "%"}</td>`).join("")}
+      <td class="${wcls(e.any)}">${e.any == null ? "–" : e.any + "%"}</td>
+      <td class="${wcls(e.ml)}">${e.ml == null ? "–" : e.ml + "%"}</td>
+      <td class="${ddLvl(e.dd) == null ? "na" : DDC[ddLvl(e.dd)]}">${e.dd == null ? "–" : e.dd.toFixed(1)}</td></tr>`;
   }
-  const skipped = d.sources.filter(s => s.members.length && state.enabled[s.id] && !st.any.per[s.id]).map(s => s.label);
-  const ltOn = [...state.cwInc].some(v => LTNG.has(v));
-  el.innerHTML = `<div class="cw-grid">${left}<table class="cw">${rows}</table></div>
-    <p class="cw-note">"Any" counts a member once if it breaks at least one checked constraint in any hour of the window, so it is usually higher than the largest single row but not their sum.${ltOn ? " Lightning and visibility come from only a few sources, so \"any\" is never below those rows when they are checked." : ""}${skipped.length ? ` Not in the member count for "any" because they can't judge every other checked constraint: ${skipped.join(", ")}.` : ""}</p>`;
-  el.querySelectorAll("input[type=checkbox]").forEach(cb => cb.addEventListener("change", () => {
-    cb.checked ? state.cwInc.add(cb.dataset.v) : state.cwInc.delete(cb.dataset.v);
-    store.set("board.cwInc", JSON.stringify([...state.cwInc])); custom();
-  }));
+  $("#cmp").innerHTML = t;
+  $("#cmp").querySelectorAll("tr[data-s]").forEach(tr => tr.addEventListener("click", () => setSite(tr.dataset.s)));
+  $("#statusNote").textContent = W.custom ? "Compare sites for the same window below; select a site to switch the whole page to it." :
+    "Enter a window above for a specific splashdown time; select a site to switch the whole page to it.";
 }
 
-// ---------- CSV
-function toCSV(rows) {
-  const d = state.data;
-  const head = ["key", "local_date", "window", "window_label", "local_start", "precip30", "ltng30", "ltng10", "xwind", "headtail", "vis200", "rh98", "low_f", "high_f", "sources", "generated_utc"];
-  const fine = state.layout === "fine"; if (fine) head.push("sky_pct");
-  const lines = [head.join(",")];
-  for (const r of rows) {
-    const p = parts(r.a * 1000);
-    lines.push([r.key, r.date, r.w, r.label, `${p.year}-${p.month}-${p.day} ${p.hour}:${p.minute}`,
-      ...["precip30", "ltng30", "ltng10", "xwind", "headtail", "vis200", "rh98", "low_f", "high_f"].map(c => r[c] ?? ""),
-      r.sources, d.generated, ...(fine ? [r.sky ?? ""] : [])].join(","));
+// ---------- 3-hour grid
+function columns() {
+  const d = state.data, wh = d.window_hours || 3, p = parts(Date.now()), cols = [];
+  for (let k = 0; k <= d.days; k++) {
+    const day = new Date(Date.UTC(+p.year, +p.month - 1, +p.day + k)), y = day.getUTCFullYear(), mo = day.getUTCMonth() + 1, dd = day.getUTCDate();
+    for (let h = 0; h < 24; h += wh) { const a = zonedToUtc(y, mo, dd, h) / 1000, b = zonedToUtc(y, mo, dd, h + wh) / 1000; cols.push({ a, b, y, mo, dd, h, ev: evaluate(state.site, a, b) }); }
   }
-  return lines.join("\r\n") + "\r\n";
+  return cols;
 }
-function download() {
-  const blob = new Blob([toCSV(state.rows)], { type: "text/csv" });
-  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = CSV_FILES[state.layout];
-  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
-}
-
-// ---------- grid
-const cls = v => v == null ? "na" : v < 20 ? "s" : v <= 50 ? "m" : "v";
 function grid() {
-  const rows = state.rows, now = Date.now() / 1000, todayKey = parts(Date.now()).year + parts(Date.now()).month + parts(Date.now()).day;
-  const fine = state.layout === "fine", dstart = r => fine && r.w === 1 ? " dstart" : "";
-  const days = []; rows.forEach(r => { const g = days[days.length - 1]; if (g && g.date === r.date) g.n++; else days.push({ date: r.date, n: 1 }); });
-  $("#grid").className = "g" + (fine ? " fine" : "");
+  const now = Date.now() / 1000, cols = state.cols, wh = state.data.window_hours || 3, per = 24 / wh;
   let h = "<thead><tr><th></th>";
-  for (const g of days) {
-    const [y, m, dd] = g.date.split("-"), wd = new Date(Date.UTC(+y, +m - 1, +dd)).toLocaleDateString("en-US", { weekday: "long", timeZone: "UTC" });
-    const today = g.date.replaceAll("-", "") === todayKey;
-    h += `<th colspan="${g.n}" class="day${today ? " today" : ""}${fine ? " dstart" : ""}">${wd}<small>${+m}/${+dd}${today ? ", today" : ""}</small></th>`;
+  for (let i = 0; i < cols.length; i += per) {
+    const c = cols[i], wd = new Date(Date.UTC(c.y, c.mo - 1, c.dd)).toLocaleDateString("en-US", { weekday: "long", timeZone: "UTC" });
+    h += `<th colspan="${per}" class="day${cols[i + per - 1].b <= now ? " past" : ""}">${wd}<small>${c.mo}/${c.dd}</small></th>`;
   }
-  h += "</tr><tr><th></th>" + rows.map(r => `<th class="${dstart(r).trim()}">${r.label}</th>`).join("") + "</tr></thead><tbody>";
-  if (fine) {
-    h += `<tr><td class="rowh">Sky cover<small>% of sky</small></td>` + rows.map(r => {
-      const v = r.sky, past = r.b <= now ? " past" : "";
-      return `<td class="sky${past}${dstart(r)}" style="${v == null ? "" : `background:color-mix(in srgb, var(--global) ${Math.round(8 + v * 0.7)}%, var(--panel))`}">${v == null ? "–" : v}</td>`;
-    }).join("") + "</tr>";
-  }
-  h += `<tr><td class="rowh">High/Low<small>°F</small></td>`;
-  for (let i = 0; i < rows.length;) {            // merge consecutive blocks of the same group within a day
-    const r = rows[i]; let j = i + 1;
-    while (j < rows.length && rows[j].date === r.date && rows[j].grp === r.grp) j++;
-    const v = r.grp === "low" ? r.low_f : r.grp === "high" ? r.high_f : null;
-    h += `<td class="temp${rows[j - 1].b <= now ? " past" : ""}${dstart(r)}" colspan="${j - i}">${v ?? (r.grp === "rest" ? "" : "–")}</td>`;
-    i = j;
-  }
-  h += "</tr>";
-  for (const R of ROWS) {
-    h += `<tr><td class="rowh">${R.name}<small>${R.sub}</small></td>`;
-    rows.forEach((r, i) => {
-      const v = r[R.col], past = r.b <= now ? " past" : "";
-      const sel = state.sel && state.sel.i === i && state.sel.col === R.col ? " sel" : "";
-      h += R.v ? `<td class="p ${cls(v)}${past}${sel}${dstart(r)}" data-i="${i}" data-col="${R.col}" tabindex="0">${v == null ? "–" : v + "%"}</td>`
-               : `<td class="na${past}${dstart(r)}">–</td>`;
-    });
-    h += "</tr>";
-  }
+  h += "</tr><tr><th></th>" + cols.map(c => `<th class="hr${c.b <= now ? " past" : ""}">${String(c.h).padStart(2, "0")}–${String((c.h + wh) % 24).padStart(2, "0")}${tzSuffix()}</th>`).join("") + "</tr></thead><tbody>";
+  const pc = c => c.b <= now ? " past" : "";
+  // Two wind rows, each colored against its own limits (Super GO / GO / NO-GO).
+  const C = state.data.constraints;
+  const lvl = (v, sg, go) => v == null ? null : v <= sg ? 0 : v <= go ? 1 : 2;
+  const windRow = (name, sub, get, sg, go, cls) => `<tr class="${cls}"><td class="rowh">${name}<small>${sub}</small></td>` + cols.map((c, i) => {
+    const v = get(c.ev), l = lvl(v, sg, go);
+    return `<td class="p ${l == null ? "na" : CATC[l]}${pc(c)}" data-i="${i}" title="${l == null ? "" : CAT[l]}">${v == null ? "–" : v.toFixed(1)}</td>`;
+  }).join("") + "</tr>";
+  h += windRow("Mean wind", `kt, GO ≤ ${C.go.mean_kt}`, e => e.mean, C.super_go.mean_kt, C.go.mean_kt, "overall");
+  h += windRow("99th percentile", `kt, GO ≤ ${C.go.p99_kt}`, e => e.p99, C.super_go.p99_kt, C.go.p99_kt, "");
+  for (const X of WX) h += `<tr><td class="rowh">${X.name}<small>${X.sub}</small></td>` + cols.map((c, i) => { const v = c.ev.wx[X.k], si = c.ev.si?.[X.k];
+    return `<td class="p ${wcls(v)}${si ? " si" : ""}${pc(c)}" data-i="${i}"${si ? ' title="Stand-in from global ensembles, lower confidence"' : ""}>${v == null ? "–" : v + "%"}</td>`; }).join("") + "</tr>";
+  h += `<tr><td class="rowh">Any weather<small>checked conditions</small></td>` + cols.map((c, i) => `<td class="p ${wcls(c.ev.any)}${pc(c)}" data-i="${i}">${c.ev.any == null ? "–" : c.ev.any + "%"}</td>`).join("") + "</tr>";
+  h += `<tr><td class="rowh">Marine layer setup<small>chance; awareness</small></td>` + cols.map((c, i) =>
+    `<td class="p ${wcls(c.ev.ml)}${pc(c)}" data-i="${i}">${c.ev.ml == null ? "–" : c.ev.ml + "%"}</td>`).join("") + "</tr>";
+  h += `<tr><td class="rowh">Dew point depression<small>°C, lowest median; awareness</small></td>` + cols.map((c, i) => {
+    const l = ddLvl(c.ev.dd); return `<td class="p ${l == null ? "na" : DDC[l]}${pc(c)}" data-i="${i}">${c.ev.dd == null ? "–" : c.ev.dd.toFixed(1)}</td>`; }).join("") + "</tr>";
   $("#grid").innerHTML = h + "</tbody>";
-  $("#grid").querySelectorAll("td.p").forEach(td => {
-    const pick = () => { state.sel = { i: +td.dataset.i, col: td.dataset.col }; state.cons = ROWS.find(R => R.col === td.dataset.col).v; grid(); detail(); segs(); chart(); };
-    td.addEventListener("click", pick);
-    td.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(); } });
-  });
-  if (!state.scrolled) {
-    const t = $("#grid").querySelector("th.today");
-    if (t) $(".grid-scroll").scrollLeft = Math.max(0, t.offsetLeft - 160);
-    state.scrolled = true;
-  }
-}
-function detail() {
-  const el = $("#detail"), d = state.data;
-  if (!state.sel) { el.innerHTML = `<h2>Source breakdown</h2><p class="sub">Select a cell in the table to see how each source contributes.</p>`; return; }
-  const r = state.rows[state.sel.i], R = ROWS.find(x => x.col === state.sel.col), per = r.per[R.col] || {};
-  const [y, m, dd] = r.date.split("-");
-  let h = `<h2>${R.name} ${R.sub}</h2><div class="sub">${+m}/${+dd}, ${r.label}</div><div class="big">${r[R.col] == null ? "–" : r[R.col] + "%"}</div><div class="sub">weighted across ${Object.keys(per).length} sources</div><table class="bysrc">`;
-  for (const s of d.sources) {
-    const p = per[s.id]; if (!p) continue;
-    h += `<tr><td>${s.label}</td><td style="width:40%"><div class="bar"><i style="width:${p.p * 100}%;background:${css("--" + s.family)}"></i></div></td><td class="v2">${Math.round(p.p * 100)}% of ${p.n}</td></tr>`;
-  }
-  el.innerHTML = h + "</table>";
+  $("#nbmNote").textContent = state.windMode?.[state.site] === "nbm" ? "Wind rows are using NBM's own mean and 99th percentile, because NBM is the only wind source switched on." : "";
+  $("#grid").querySelectorAll("td.p").forEach(td => td.addEventListener("click", () => { const c = state.cols[+td.dataset.i]; setCustom(c.a, c.b); refreshViews(); }));
+  if (!state.scrolled) { const i = cols.findIndex(c => c.b > now), th = $("#grid").querySelectorAll("th.hr")[Math.max(0, i)]; if (th) $(".grid-scroll").scrollLeft = Math.max(0, th.offsetLeft - 170); state.scrolled = true; }
 }
 
-// ---------- hourly chart
-function hourlyStats(v) {
-  const d = state.data, C = d.constraints, rwy = d.runway_heading_true, T = d.times.length;
-  const fam = {}, all = new Array(T).fill(null);
-  for (const [f] of FAMS) fam[f] = new Array(T).fill(null);
-  for (let i = 0; i < T; i++) {
-    let num = 0, den = 0; const fn = {}, fd = {};
-    for (const s of d.sources) {
-      if (!state.enabled[s.id] || !s.members.length) continue;
-      let hit = 0, n = 0;
-      for (const m of s.members) { const x = exceed(v, m.v, i, C, rwy); if (x != null) { n++; hit += x; } }
-      if (!n) continue;
-      num += s.weight * hit / n; den += s.weight;
-      fn[s.family] = (fn[s.family] || 0) + s.weight * hit / n; fd[s.family] = (fd[s.family] || 0) + s.weight;
-    }
-    if (den) all[i] = num / den;
-    for (const f in fd) fam[f][i] = fn[f] / fd[f];
-  }
-  return { all, fam };
-}
-function segs() {
-  $("#consSeg").innerHTML = ROWS.filter(R => R.v).map(R => `<button type="button" data-v="${R.v}" aria-pressed="${R.v === state.cons}">${R.name} ${R.sub}</button>`).join("");
-  $("#consSeg").querySelectorAll("button").forEach(b => b.addEventListener("click", () => { state.cons = b.dataset.v; segs(); chart(); }));
-}
-function chart() {
-  const cv = $("#chart"), d = state.data, T = d.times;
-  const R = ROWS.find(x => x.v === state.cons);
-  $("#chartTitle").textContent = `Hourly chance: ${R.name.toLowerCase()} ${R.sub}`;
-  const w = cv.parentElement.clientWidth - 28, h = 260, dpr = window.devicePixelRatio || 1;
-  cv.width = w * dpr; cv.height = h * dpr; cv.style.width = w + "px"; cv.style.height = h + "px";
-  const g = cv.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0);
-  const L = 40, Rm = 8, top = 10, bot = 24, n = T.length - 1;
-  const x = i => L + (w - L - Rm) * i / n, y = v => top + (h - top - bot) * (1 - v);
-  const font = `12px ${css("--font")}`; g.font = font;
-  // bands every other day
-  const rows = state.rows, groups = [];
-  rows.forEach(r => { const q = groups[groups.length - 1]; if (q && q.date === r.date) q.last = r; else groups.push({ date: r.date, first: r, last: r }); });
-  groups.forEach((q, gi) => {
-    if (gi % 2) return;
-    const a = T.findIndex(t => t >= q.first.a); let b = T.findIndex(t => t >= q.last.b); if (b < 0) b = n;
-    if (a < 0) return;
-    g.fillStyle = alpha(css("--rule"), .35); g.fillRect(x(a), top, x(b) - x(a), h - top - bot);
+// ---------- charts
+const charts = {};
+function setupCharts() {
+  document.querySelectorAll(".chart").forEach(el => {
+    const [base, ov] = el.querySelectorAll("canvas"); charts[el.dataset.kind] = { el, base, ov };
+    el.addEventListener("pointermove", e => hover(e, base)); el.addEventListener("pointerdown", e => hover(e, base));
+    el.addEventListener("pointerleave", e => { if (e.pointerType === "mouse") { state.hover = null; overlays(); readout(); } });
   });
-  g.textAlign = "right"; g.textBaseline = "middle";
-  for (const v of [0, .2, .5, 1]) {
-    g.strokeStyle = v === .2 || v === .5 ? alpha(v === .2 ? css("--marginal") : css("--severe"), .8) : css("--rule");
-    g.setLineDash(v === .2 || v === .5 ? [4, 3] : []); g.beginPath(); g.moveTo(L, y(v)); g.lineTo(w - Rm, y(v)); g.stroke(); g.setLineDash([]);
-    g.fillStyle = css("--muted"); g.fillText(Math.round(v * 100) + "%", L - 6, y(v));
-  }
-  g.textAlign = "center"; g.textBaseline = "top";
-  T.forEach((t, i) => { const p = parts(t * 1000); if (p.hour === "00") { g.fillStyle = css("--ink"); g.fillText(`${p.weekday} ${+p.day}`, x(i), h - bot + 5); } });
-  if (state.cw.a != null && state.cw.b > state.cw.a) {
-    const i0 = T.findIndex(t => t >= Math.floor(state.cw.a / 3600) * 3600); let i1 = T.findIndex(t => t >= state.cw.b); if (i1 < 0) i1 = n;
-    if (i0 >= 0) { g.fillStyle = alpha(css("--hires"), .16); g.fillRect(x(i0), top, Math.max(2, x(i1) - x(i0)), h - top - bot);
-      g.fillStyle = css("--hires"); g.font = `600 11px ${css("--font")}`; g.textAlign = "left"; g.textBaseline = "top"; g.fillText("Your window", x(i0) + 3, top + 2); g.font = font; }
-  }
-  const nowI = T.findIndex(t => t * 1000 >= Date.now());
-  if (nowI > 0) { g.strokeStyle = css("--muted"); g.setLineDash([3, 3]); g.beginPath(); g.moveTo(x(nowI), top); g.lineTo(x(nowI), h - bot); g.stroke(); g.setLineDash([]); }
-  const st = hourlyStats(state.cons);
-  const line = (arr, color, width) => {
-    g.strokeStyle = color; g.lineWidth = width; g.beginPath(); let pen = false;
-    arr.forEach((v, i) => { if (v == null) { pen = false; return; } pen ? g.lineTo(x(i), y(v)) : g.moveTo(x(i), y(v)); pen = true; });
-    g.stroke(); g.lineWidth = 1;
-  };
-  for (const [f] of FAMS) line(st.fam[f], alpha(css("--" + f), .9), 1.3);
-  line(st.all, css("--line"), 2.4);
-  const names = { hires: "Hi-res", blend: "Blends", global: "Global ensembles" };
-  $("#chartLegend").innerHTML = `<span><i style="background:var(--line)"></i>All sources, weighted</span>` +
-    FAMS.filter(([f]) => st.fam[f].some(v => v != null)).map(([f]) => `<span><i style="background:var(--${f})"></i>${names[f]}</span>`).join("") +
-    `<span>Hourly values; window cells use any hour in the window, so they run higher.</span>`;
+}
+function size(cv, h) { const dpr = window.devicePixelRatio || 1, w = cv.parentElement.clientWidth; cv.width = w * dpr; cv.height = h * dpr; cv.style.width = w + "px"; cv.style.height = h + "px"; const g = cv.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0); return { g, w, h }; }
+const xOf = (i, w) => M.l + (w - M.l - M.r) * i / (state.data.times.length - 1);
+function hover(e, cv) { const r = cv.getBoundingClientRect(), n = state.data.times.length - 1; state.hover = Math.max(0, Math.min(n, Math.round((e.clientX - r.left - M.l) / (r.width - M.l - M.r) * n))); overlays(); readout(); }
+function axes(g, w, h, top, bot, lo, hi, ticks, fmt, labels) {
+  const y = v => top + (h - top - bot) * (1 - (v - lo) / (hi - lo));
+  g.font = `12px ${css("--font")}`; g.textAlign = "right"; g.textBaseline = "middle";
+  for (const t of ticks) { g.strokeStyle = css("--rule"); g.beginPath(); g.moveTo(M.l, y(t)); g.lineTo(w - M.r, y(t)); g.stroke(); g.fillStyle = css("--muted"); g.fillText(fmt(t), M.l - 6, y(t)); }
+  const T = state.data.times; g.textAlign = "center"; g.textBaseline = "top";
+  T.forEach((t, i) => { const p = parts(t * 1000); if (+p.hour % 6) return; const x = xOf(i, w);
+    g.strokeStyle = p.hour === "00" ? css("--muted") : css("--rule"); g.globalAlpha = p.hour === "00" ? .6 : 1; g.beginPath(); g.moveTo(x, top); g.lineTo(x, h - bot); g.stroke(); g.globalAlpha = 1;
+    if (labels && (p.hour === "00" || (w > 700 && +p.hour % 12 === 0))) { g.fillStyle = p.hour === "00" ? css("--ink") : css("--muted"); g.fillText(p.hour === "00" ? `${p.weekday} ${+p.day}` : p.hour, x, h - bot + 4); } });
+  if (state.cw.a != null && state.cw.b > state.cw.a) { const i0 = T.findIndex(t => t >= Math.floor(state.cw.a / 3600) * 3600); let i1 = T.findIndex(t => t >= state.cw.b); if (i1 < 0) i1 = T.length - 1;
+    if (i0 >= 0) { g.fillStyle = alpha(css("--hires"), .14); g.fillRect(xOf(i0, w), top, Math.max(2, xOf(i1, w) - xOf(i0, w)), h - top - bot); } }
+  const ni = T.findIndex(t => t * 1000 >= Date.now()); if (ni > 0) { g.strokeStyle = css("--muted"); g.setLineDash([3, 3]); g.beginPath(); g.moveTo(xOf(ni, w), top); g.lineTo(xOf(ni, w), h - bot); g.stroke(); g.setLineDash([]); }
+  return y;
+}
+function line(g, w, y, arr, color, width, dash) { g.strokeStyle = color; g.lineWidth = width; g.setLineDash(dash || []); g.beginPath(); let pen = false;
+  arr.forEach((v, i) => { if (v == null) { pen = false; return; } pen ? g.lineTo(xOf(i, w), y(v)) : g.moveTo(xOf(i, w), y(v)); pen = true; }); g.stroke(); g.setLineDash([]); g.lineWidth = 1; }
+function drawWind() {
+  const c = charts.wind, { g, w, h } = size(c.base, 260), top = 8, bot = 6, C = state.data.constraints, key = "w@" + state.site;
+  const hw = state.hourly[state.site]; let hi = C.go.p99_kt + 3; hw.forEach(s => { if (s) hi = Math.max(hi, s.p99 + 2); }); hi = Math.ceil(hi / 5) * 5;
+  const ticks = []; for (let t = 0; t <= hi; t += hi > 30 ? 10 : 5) ticks.push(t);
+  const y = axes(g, w, h, top, bot, 0, hi, ticks, v => v, false);
+  for (const s of state.data.sources) { if (!state.enabled[s.id]) continue; const a = Math.max(.1, Math.min(.45, 3 / Math.sqrt(s.members.length + 1)));
+    for (const m of s.members) if (m.v[key]) line(g, w, y, m.v[key], alpha(css("--" + s.family), a), 1); }
+  const hl = (v, col, dash) => { g.strokeStyle = col; g.setLineDash(dash); g.lineWidth = 1.4; g.beginPath(); g.moveTo(M.l, y(v)); g.lineTo(w - M.r, y(v)); g.stroke(); g.setLineDash([]); g.lineWidth = 1; };
+  hl(C.go.mean_kt, css("--slight"), []); hl(C.super_go.mean_kt, css("--sgo"), []); hl(C.go.p99_kt, css("--slight"), [5, 4]); hl(C.super_go.p99_kt, css("--sgo"), [5, 4]);
+  line(g, w, y, hw.map(s => s && s.p99), css("--severe"), 2, [6, 4]);
+  line(g, w, y, hw.map(s => s && s.mean), css("--line"), 2.4);
+  c.geom = { top, bot };
+}
+function drawRibbon() {
+  const c = charts.ribbon, { g, w } = size(c.base, 22), hw = state.hourly[state.site], n = state.data.times.length, cw = (w - M.l - M.r) / (n - 1);
+  g.font = `12px ${css("--font")}`; g.fillStyle = css("--muted"); g.textAlign = "right"; g.textBaseline = "middle"; g.fillText("Wind", M.l - 6, 11);
+  hw.forEach((s, i) => { g.fillStyle = s ? css(["--sgo", "--slight", "--severe"][s.cat]) : alpha(css("--rule"), .4); g.fillRect(xOf(i, w) - cw / 2, 3, cw + .5, 16); });
+  c.geom = { top: 0, bot: 0 };
+}
+function hourlyWx(site, k) {
+  const d = state.data, key = `${k}@${site}`, T = d.times.length, out = new Array(T).fill(null);
+  for (let i = 0; i < T; i++) { let num = 0, den = 0;
+    for (const s of d.sources) { if (!state.enabled[s.id]) continue; let hit = 0, n = 0; for (const m of s.members) { const x = m.v[key]; if (x && x[i] != null) { n++; hit += x[i]; } } if (n) { num += s.weight * hit / n; den += s.weight; } }
+    if (den) out[i] = num / den; }
+  return out;
+}
+function drawWx() {
+  const c = charts.wx, { g, w, h } = size(c.base, 190), top = 8, bot = 22;
+  const y = axes(g, w, h, top, bot, 0, 1, [0, .2, .5, 1], v => Math.round(v * 100) + "%", true);
+  state.wxh = {}; for (const X of WX) { state.wxh[X.k] = hourlyWx(state.site, X.k); line(g, w, y, state.wxh[X.k], X.color, 2); }
+  const cs = hourlyWx(state.site, "cs"), direct = state.wxh.c;
+  state.wxh.cs = cs.map((v, i) => direct[i] == null ? v : null);
+  line(g, w, y, state.wxh.cs, "#7a5bbf", 1.6, [5, 4]);
+  c.geom = { top, bot };
+}
+function drawML() {
+  const c = charts.ml, { g, w, h } = size(c.base, 170), top = 8, bot = 22, C = state.data.constraints;
+  const hm = state.ml[state.site] || (state.ml[state.site] = hourlyML(state.site)), hi = 1500;
+  const y = axes(g, w, h, top, bot, 0, hi, [0, 500, 1000, 1500], v => v + " m", true);
+  const lim = C.ml_base_max_m ?? 500;
+  g.fillStyle = alpha(css("--marginal"), .16); g.fillRect(M.l, y(lim), w - M.r - M.l, y(0) - y(lim));
+  g.fillStyle = alpha(css("--global"), .25);
+  hm.forEach((s, i) => { if (!s || s.b10 > hi) return; const x0 = xOf(i, w), x1 = xOf(i + 1, w);
+    g.fillRect(x0, y(Math.min(hi, s.b90)), Math.max(1, x1 - x0), y(s.b10) - y(Math.min(hi, s.b90))); });
+  line(g, w, y, hm.map(s => s && s.b50 <= hi ? s.b50 : null), css("--line"), 2.2);
+  c.geom = { top, bot };
+}
+function drawDD() {
+  const c = charts.dd, { g, w, h } = size(c.base, 170), top = 8, bot = 22, hd = state.dd[state.site] || (state.dd[state.site] = hourlyDD(state.site));
+  const C = state.data.constraints; let hi = 8; hd.forEach(s => { if (s) hi = Math.max(hi, s.p90 + 1); }); hi = Math.min(25, Math.ceil(hi / 2) * 2);
+  const ticks = []; for (let t = 0; t <= hi; t += hi > 12 ? 4 : 2) ticks.push(t);
+  const y = axes(g, w, h, top, bot, 0, hi, ticks, v => v + "°", true);
+  g.fillStyle = alpha(css("--severe"), .14); g.fillRect(M.l, y(C.dd_warning_c ?? 1), w - M.l - M.r, y(0) - y(C.dd_warning_c ?? 1));
+  g.fillStyle = alpha(css("--marginal"), .16); g.fillRect(M.l, y(C.dd_caution_c ?? 3), w - M.l - M.r, y(C.dd_warning_c ?? 1) - y(C.dd_caution_c ?? 3));
+  g.fillStyle = alpha(css("--global"), .25);
+  hd.forEach((s, i) => { if (!s) return; const x0 = xOf(i, w), x1 = xOf(i + 1, w); g.fillRect(x0, y(s.p90), Math.max(1, x1 - x0), y(s.p10) - y(s.p90)); });
+  line(g, w, y, hd.map(s => s && s.med), css("--line"), 2.2);
+  c.geom = { top, bot };
+}
+function overlays() {
+  for (const k in charts) { const c = charts[k]; if (!c.geom) continue; const { g, w, h } = size(c.ov, parseFloat(c.base.style.height)); if (state.hover == null) continue;
+    const x = Math.round(xOf(state.hover, w)) + .5; g.strokeStyle = css("--ink"); g.globalAlpha = .7; g.beginPath(); g.moveTo(x, c.geom.top); g.lineTo(x, h - c.geom.bot); g.stroke(); g.globalAlpha = 1; }
+}
+function readout() {
+  const d = state.data, i = state.hover ?? Math.max(0, d.times.findIndex(t => t * 1000 >= Date.now() - 1800e3)), t = d.times[i] * 1000;
+  const s = state.hourly[state.site][i];
+  let h = `<div class="when">${zHour(t)}<small>${local(t)}</small></div>`;
+  if (!s) { $("#readout").innerHTML = h + `<p class="sub">No wind data for this hour.</p>`; return; }
+  h += `<div class="cat" style="background:var(${["--sgo", "--slight", "--severe"][s.cat]})">${CAT[s.cat]}</div>
+    <div class="sub">${s.nbm ? `NBM mean ${s.mean.toFixed(1)} kt, NBM 99th percentile ${s.p99.toFixed(1)} kt (from NBM's own wind distribution)`
+      : `Mean ${s.mean.toFixed(1)} kt, 99th percentile ${s.p99.toFixed(1)} kt, 10–90% ${s.p10.toFixed(1)}–${s.p90.toFixed(1)} kt (${s.n} members)`}</div><table>`;
+  for (const X of WX) { let v = state.wxh?.[X.k]?.[i], tag = "";
+    if (v == null && X.k === "c" && state.wxh?.cs?.[i] != null) { v = state.wxh.cs[i]; tag = " (stand-in)"; }
+    h += `<tr><td>${X.name} ${X.sub}${tag}</td><td class="v2">${v == null ? "–" : Math.round(v * 100) + "%"}</td></tr>`; }
+  { const ml = (state.ml[state.site] || [])[i];
+    h += `<tr><td>Marine layer setup</td><td class="v2">${ml ? Math.round(ml.p * 100) + "%" : "–"}</td></tr>`;
+    if (ml) h += `<tr><td>Inversion base, median</td><td class="v2">${ml.b50 > 5000 ? "none" : Math.round(ml.b50) + " m (" + Math.round(ml.b50 / 0.3048 / 10) * 10 + " ft)"}</td></tr>`;
+    if (ml && ml.s50 != null) h += `<tr><td>Inversion strength, median</td><td class="v2">${ml.s50.toFixed(1)} °C</td></tr>`; }
+  { const dd = (state.dd[state.site] || [])[i]; h += `<tr><td>Dew point depression</td><td class="v2"${dd && ddLvl(dd.med) ? ` style="color:var(${ddLvl(dd.med) === 2 ? "--severe" : "--marginal"});font-weight:600"` : ""}>${dd ? dd.med.toFixed(1) + " °C" : "–"}</td></tr>`; }
+  h += `<tr><td colspan="2" class="sub" style="padding-top:8px">Mean wind by source</td></tr>`;
+  for (const src of d.sources) if (s.per[src.id] != null) h += `<tr><td>${src.label}</td><td class="v2">${s.per[src.id].toFixed(1)} kt</td></tr>`;
+  $("#readout").innerHTML = h + "</table>";
 }
 
-// ---------- sources
-function saveOff() { store.set("board.off", JSON.stringify(state.data.sources.filter(s => s.members.length && !state.enabled[s.id]).map(s => s.id))); }
+// ---------- sources, site, window
+function saveOff() { store.set("sd.off", JSON.stringify(state.data.sources.filter(s => s.members.length && !state.enabled[s.id]).map(s => s.id))); }
 function famToggles() {
   const d = state.data, el = $("#fams");
-  el.innerHTML = FAMS.map(([f, name]) => `<label><input type="checkbox" data-fam="${f}"><span class="dot" style="background:var(--${f})"></span>${name}</label>`).join("");
-  el.querySelectorAll("input").forEach(cb => {
-    const srcs = d.sources.filter(s => s.family === cb.dataset.fam && s.members.length);
-    const on = srcs.filter(s => state.enabled[s.id]).length;
+  el.innerHTML = FAMS.map(([f, n]) => `<label><input type="checkbox" data-fam="${f}"><span class="dot" style="background:var(--${f})"></span>${n}</label>`).join("");
+  el.querySelectorAll("input").forEach(cb => { const srcs = d.sources.filter(s => s.family === cb.dataset.fam && s.members.length), on = srcs.filter(s => state.enabled[s.id]).length;
     cb.disabled = !srcs.length; cb.checked = srcs.length > 0 && on === srcs.length; cb.indeterminate = on > 0 && on < srcs.length;
-    cb.addEventListener("change", () => { for (const s of srcs) state.enabled[s.id] = cb.checked; saveOff(); recompute(); });
-  });
+    cb.addEventListener("change", () => { for (const s of srcs) state.enabled[s.id] = cb.checked; saveOff(); recompute(); }); });
 }
 function sourceList() {
-  const d = state.data;
-  $("#srclist").innerHTML = d.sources.map(s => {
-    const has = s.members.length > 0;
+  $("#srclist").innerHTML = state.data.sources.map(s => { const has = s.members.length > 0;
     return `<li><input type="checkbox" id="src-${s.id}" data-id="${s.id}" ${state.enabled[s.id] ? "checked" : ""} ${has ? "" : "disabled"}>
-      <label class="nm" for="src-${s.id}"><span class="dot" style="background:var(--${s.family})"></span>${s.label}</label>
-      <span class="chip ${s.status}">${s.status}</span>
-      <span class="meta">${has ? `${s.members.length} member${s.members.length > 1 ? "s" : ""}, weight ${s.weight}` : "no data"}${s.cycle ? `, ${s.cycle.replace("T", " ")}` : ""}${s.note ? `. ${s.note}` : ""}</span></li>`;
-  }).join("");
+      <label class="nm" for="src-${s.id}"><span class="dot" style="background:var(--${s.family})"></span>${s.label}</label><span class="chip ${s.status}">${s.status}</span>
+      <span class="meta">${s.role === "nbm_pct" ? (has ? "used for wind when NBM is the only wind source on" : "no data") : has ? `${s.members.length} member${s.members.length > 1 ? "s" : ""}, weight ${s.weight}` : "no data"}${s.cycle ? `, ${s.cycle.replace("T", " ")}` : ""}${s.note ? `. ${s.note}` : ""}</span></li>`; }).join("");
   $("#srclist").querySelectorAll("input").forEach(cb => cb.addEventListener("change", () => { state.enabled[cb.dataset.id] = cb.checked; saveOff(); recompute(); }));
   famToggles();
 }
-function recompute() {
-  state.rows = windowTable(); sourceList(); grid(); detail(); custom(); chart();
-  const all = state.data.sources.every(s => !s.members.length || state.enabled[s.id]);
-  $("#dlhint").textContent = all ? "All sources are on, so this matches the published CSV." : "Some sources are off; the download reflects your selection. The published CSV always uses every source.";
+function setSite(id) { state.site = id; store.set("sd.site", id); siteSeg(); header(); refreshViews(); }
+function siteSeg() {
+  $("#siteSeg").innerHTML = state.data.sites.map(s => `<button type="button" data-s="${s.id}" aria-pressed="${s.id === state.site}">${s.label}</button>`).join("");
+  $("#siteSeg").querySelectorAll("button").forEach(b => b.addEventListener("click", () => setSite(b.dataset.s)));
+}
+function setCustom(a, b, save = true) {
+  state.cw = { a, b }; setPicker("cwStart", a); setPicker("cwEnd", b);
+  if (save) { const u = new URL(location.href), z = x => new Date(x * 1000).toISOString().slice(0, 16) + "Z";
+    u.hash = a != null && b != null ? `start=${z(a)}&end=${z(b)}` : ""; history.replaceState(null, "", u); store.set("sd.cw", a != null && b != null ? JSON.stringify(state.cw) : null); }
 }
 function header() {
-  const d = state.data, st = d.site;
-  $("#where").textContent = `${Math.abs(st.lat).toFixed(3)}°N, ${Math.abs(st.lon).toFixed(3)}°W, runway ${String(d.runway_heading_true).padStart(3, "0")}° true, windows in local time${state.layout === "fine" ? ", 3-hour blocks days 1–5 and 6-hour blocks days 6–7" : ""}`;
-  const age = Math.max(0, Math.round((Date.now() / 1000 - d.generated_unix) / 60)), stale = age > STALE_MIN;
-  const ageTxt = age < 90 ? `${age} min ago` : `${(age / 60).toFixed(1)} h ago`;
-  $("#fresh").className = "fresh" + (stale ? " stale" : "");
-  $("#fresh").innerHTML = `Updated <b>${d.generated.slice(11, 16)}Z ${d.generated.slice(0, 10)}</b><br><span class="where">${ageTxt}</span>`;
-  let b = "";
-  if (d.demo) b += `<div class="banner">Demo data. The first scheduled run replaces this with live guidance.</div>`;
+  const d = state.data, s = d.sites.find(x => x.id === state.site);
+  $("#where").textContent = `${s.label} at ${s.lat.toFixed(3)}°N, ${Math.abs(s.lon).toFixed(3)}°W, times in ${ZULU ? "Zulu (UTC)" : parts(Date.now()).timeZoneName}, 24-hour`;
+  const age = Math.max(0, Math.round((Date.now() / 1000 - d.generated_unix) / 60)), stale = age > STALE_MIN, ageTxt = age < 90 ? `${age} min ago` : `${(age / 60).toFixed(1)} h ago`;
+  $("#fresh").className = "fresh" + (stale ? " stale" : ""); $("#fresh").innerHTML = `Updated <b>${d.generated.slice(11, 16)}Z ${d.generated.slice(0, 10)}</b><br><span class="where">${ageTxt}</span>`;
+  let b = ""; if (d.demo) b += `<div class="banner">Demo data. The first scheduled run replaces this with live guidance.</div>`;
   if (stale && !d.demo) b += `<div class="banner bad">Data is ${ageTxt.replace(" ago", "")} old. The hourly update may have failed; check the repository's Actions tab.</div>`;
-  const bad = d.sources.filter(s => ["error", "missing"].includes(s.status));
-  if (bad.length) b += `<div class="banner">No data this run from ${bad.map(s => s.label).join(", ")}.</div>`;
-  $("#banners").innerHTML = b;
+  const bad = d.sources.filter(s => ["error", "missing"].includes(s.status)); if (bad.length) b += `<div class="banner">No data this run from ${bad.map(s => s.label).join(", ")}.</div>`;
+  $("#banners").innerHTML = b; $("#cwTz").textContent = ZULU ? "Z" : parts(Date.now()).timeZoneName;
 }
-
+function refreshViews() { state.hourly[state.site] = state.hourly[state.site] || hourlyWind(state.site); state.cols = columns(); status(); grid(); drawWind(); drawRibbon(); drawWx(); drawML(); drawDD(); overlays(); readout(); }
+function recompute() { state.hourly = {}; state.dd = {}; state.ml = {}; sourceList(); refreshViews(); }
 async function load(first) {
-  let d;
-  try {
-    const r = await fetch(DATA_URL + "?t=" + Date.now(), { cache: "no-store" });
-    if (!r.ok) throw new Error("HTTP " + r.status);
-    d = await r.json();
-  } catch (e) {
-    if (first) $("#banners").innerHTML = `<div class="banner bad">Could not load ${DATA_URL} (${e.message}). The first pipeline run creates it.</div>`;
-    return;
-  }
+  let d; try { const r = await fetch(DATA_URL + "?t=" + Date.now(), { cache: "no-store" }); if (!r.ok) throw new Error("HTTP " + r.status); d = await r.json(); }
+  catch (e) { if (first) $("#banners").innerHTML = `<div class="banner bad">Could not load ${DATA_URL} (${e.message}). The first pipeline run creates it.</div>`; return; }
   if (!first && state.data && d.generated_unix === state.data.generated_unix) { header(); return; }
-  state.data = d; TZ = d.site.display_tz || TZ; prepSteps(d);
-  let off; try { off = new Set(JSON.parse(store.get("board.off") || "[]")); } catch { off = new Set(); }
+  state.data = d; LOCAL_TZ = d.display_tz || LOCAL_TZ; TZ = ZULU ? "UTC" : LOCAL_TZ; state.tindex = new Map(d.times.map((t, i) => [t, i]));
+  let off; try { off = new Set(JSON.parse(store.get("sd.off") || "[]")); } catch { off = new Set(); }
   for (const s of d.sources) if (!(s.id in state.enabled)) state.enabled[s.id] = s.members.length > 0 && !off.has(s.id);
   if (first) {
-    const q = new URLSearchParams(location.search).get("layout"), sv = store.get("board.layout");
-    state.layout = ["std", "fine"].includes(q) ? q : ["std", "fine"].includes(sv) ? sv : "std";
-    $("#layout").value = state.layout;
+    const sv = store.get("sd.site"); state.site = d.sites.some(s => s.id === sv) ? sv : d.sites[0].id;
+    try { const inc = JSON.parse(store.get("sd.inc") || "null"); if (Array.isArray(inc)) state.inc = new Set(inc); } catch {}
     const hz = k => { const m = location.hash.match(new RegExp(k + "=([\\dT:-]+)Z")); return m ? Date.parse(m[1] + ":00Z") / 1000 : null; };
-    let a = hz("start"), b = hz("end");
-    if (a == null) { try { ({ a, b } = JSON.parse(store.get("board.cw") || "{}")); } catch {} }
+    let a = hz("start"), b = hz("end"); if (a == null) { try { ({ a, b } = JSON.parse(store.get("sd.cw") || "{}")); } catch {} }
     setCustom(a ?? null, b ?? null, false);
-    try { const inc = JSON.parse(store.get("board.cwInc") || "null"); if (Array.isArray(inc)) { state.cwInc = new Set(inc); if (!store.get("board.cwVis")) { state.cwInc.add("vis"); store.set("board.cwVis", "1"); } } } catch {}
   }
-  header(); segs(); recompute();
+  header(); siteSeg(); recompute();
 }
-const cwChange = () => {
-  const a = $("#cwStart").value, b = $("#cwEnd").value;
-  setCustom(a ? fromLocalInput(a) : null, b ? fromLocalInput(b) : null);
-  if (state.data) { custom(); chart(); }
-};
-$("#cwStart").addEventListener("change", cwChange);
-$("#cwEnd").addEventListener("change", cwChange);
-$("#cwClear").addEventListener("click", () => { setCustom(null, null); if (state.data) { custom(); chart(); } });
-$("#dl").addEventListener("click", download);
-$("#layout").addEventListener("change", () => {
-  state.layout = $("#layout").value; state.sel = null; state.scrolled = false; store.set("board.layout", state.layout);
-  const u = new URL(location.href); u.searchParams.set("layout", state.layout); history.replaceState(null, "", u);
-  if (state.data) { header(); recompute(); }
-});
-window.boardCSV = () => toCSV(state.rows);   // used by tests and handy in the console
-window.boardSetLayout = l => { state.layout = l; recompute(); return toCSV(state.rows); };
-$("#copy").addEventListener("click", async () => {
-  const url = new URL(CSV_URLS[state.layout], location.href).href;
-  try { await navigator.clipboard.writeText(url); $("#dlhint").textContent = "Copied: " + url; }
-  catch { $("#dlhint").textContent = url; }
-});
-let rt; window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => state.data && chart(), 150); });
-matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => state.data && recompute());
-load(true); setInterval(() => load(false), REFRESH_MS);
+// 24-hour pickers: a date box plus hour (00-23) and minute selects, in the chosen time zone
+function fillPickers() {
+  for (const id of ["cwStart", "cwEnd"]) {
+    $(`#${id}H`).innerHTML = Array.from({ length: 24 }, (_, h) => `<option>${String(h).padStart(2, "0")}</option>`).join("");
+    $(`#${id}M`).innerHTML = ["00", "15", "30", "45"].map(m => `<option>${m}</option>`).join("");
+  }
+}
+function setPicker(id, sec) {
+  if (sec == null) { $(`#${id}D`).value = ""; $(`#${id}H`).value = "00"; $(`#${id}M`).value = "00"; return; }
+  const p = parts(sec * 1000), mm = String(Math.floor(+p.minute / 15) * 15).padStart(2, "0");
+  $(`#${id}D`).value = `${p.year}-${p.month}-${p.day}`; $(`#${id}H`).value = p.hour; $(`#${id}M`).value = mm;
+}
+function readPicker(id) {
+  const d = $(`#${id}D`).value; if (!d) return null;
+  return fromLocalInput(`${d}T${$(`#${id}H`).value}:${$(`#${id}M`).value}`);
+}
+const cwChange = () => { setCustom(readPicker("cwStart"), readPicker("cwEnd")); if (state.data) refreshViews(); };
+fillPickers();
+for (const id of ["cwStartD", "cwStartH", "cwStartM", "cwEndD", "cwEndH", "cwEndM"]) $("#" + id).addEventListener("change", cwChange);
+// time zone toggle: switches every label, the 3-hour blocks and the pickers
+function setZone(z, save = true) {
+  ZULU = z === "zulu"; TZ = ZULU ? "UTC" : LOCAL_TZ;
+  document.querySelectorAll("#tzSeg button").forEach(b => b.setAttribute("aria-pressed", b.dataset.tz === z));
+  if (save) store.set("sd.tz", z);
+  setCustom(state.cw.a, state.cw.b, false);
+  if (state.data) { header(); refreshViews(); }
+}
+document.querySelectorAll("#tzSeg button").forEach(b => b.addEventListener("click", () => setZone(b.dataset.tz)));
+setZone(store.get("sd.tz") === "zulu" ? "zulu" : "local", false);
+$("#cwClear").addEventListener("click", () => { setCustom(null, null); if (state.data) refreshViews(); });
+let rt; window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => state.data && refreshViews(), 150); });
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => state.data && refreshViews());
+setupCharts(); load(true); setInterval(() => load(false), REFRESH_MS);
 })();
 </script>
 </body>
