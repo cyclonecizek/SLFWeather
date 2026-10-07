@@ -1,45 +1,51 @@
-# Splashdown weather board: Southern California offshore sites.
+# 7-Day constraint board configuration.
 
-display_tz: America/Los_Angeles
-days: 7
-window_hours: 3
-hours_back: 12
+site:
+  lat: 28.6150
+  lon: -80.6945
+  display_tz: America/New_York
 
-sites:
-  - {id: OCN,  label: OCN,  lat: 33.012, lon: -117.748}
-  - {id: LOS,  label: LOS,  lat: 33.679, lon: -119.153}
-  - {id: SAND, label: SAND, lat: 32.603, lon: -117.704}
+# Local-time windows, same as the 7-Day product columns (00-11L, 11-18L, 18-24L).
+windows: [[0, 11], [11, 18], [18, 24]]
+days: 8
+
+# "Fine" layout (the page's Time blocks dropdown): 3-hour blocks for the first N days,
+# then 6-hour blocks, starting today. High/Low keep the windows[0] / windows[1] definitions.
+fine_layout:
+  three_hour_days: 5
+  six_hour_days: 2
+
+runway_heading_true: 330
+
+# Wind CSVs in the GSL NBM point-file layout for the forecast workbook's NBM import:
+# docs/data/<name>_NBM_wind.csv (NBM alone) and docs/data/<name>_ENS_wind.csv (all sources).
+wind_csv:
+  name: KTTS
+  nbm_source: nbm
 
 constraints:
-  # Wind: judged on the ensemble each hour (all enabled members, each source's weight split
-  # across its members). Mean = weighted mean 10 m wind; p99 = weighted 99th percentile.
-  super_go: {mean_kt: 7.25, p99_kt: 10.0}
-  go:       {mean_kt: 7.75, p99_kt: 11.5}
-  # Weather: chance a member meets the condition at some hour in the window.
-  radius_nm: 10                # precip and lightning: anywhere within this distance of the site
-  precip_dbz: 20               # hi-res: 1 km reflectivity (composite if absent) >= this
-  precip_in: 0.01              # global ensembles: 1 h precip >= this at the site or 10 nm ring
-  ltng_threshold: 0.05         # hi-res lightning field (flashes/km2/5 min) above this
-  ceiling_ft: 500              # ceiling below this at the site
-  # Dew point depression (situational awareness only, not a constraint): highlighted when
-  # the ensemble median is within these values (C).
-  dd_caution_c: 3
-  dd_warning_c: 1
-  # Global-ensemble ceiling stand-in (used only where no direct ceiling guidance exists):
-  # cloud base ~ lcl_m_per_c metres per C of dew point depression, plus low cloud cover.
-  lcl_m_per_c: 125
-  standin_low_cloud_pct: 70
-  # Marine layer setup (situational awareness): lowest inversion in the lowest ml_max_m metres,
-  # base at or below ml_base_max_m, warming of at least ml_strength_min_c across it, and moist
-  # air under it (2 m dew point depression <= ml_dd_max_c, or 1000 mb RH >= ml_rh_min).
-  ml_max_m: 2000
-  ml_base_max_m: 500
-  ml_strength_min_c: 3
-  ml_dd_max_c: 2.5
-  ml_rh_min: 90
-  vis_sm: 1                    # visibility below this at the site
+  crosswind_kt: 10            # 10 m gust x |sin(dir - runway)| above this
+  headtail_kt: 15             # |10 m gust x cos(dir - runway)| above this (one runway end over its limit)
+  rh_pct: 98                  # 2 m RH above this
+  precip_radius_nm: 30
+  lightning_radii_nm: [30, 10]
+  # Hi-res GRIB models: precip = 1 km reflectivity >= this anywhere in the radius
+  precip_dbz: 20
+  # Lightning comes only from explicit lightning output: hi-res LTNG (flashes/km2/5 min)
+  # above this anywhere in the radius, and NBM thunder probability (nbm_tstm source).
+  ltng_threshold: 0.05
+  # Global ensembles / NBM: precip >= this (in/hr) at any sample point in the radius.
+  precip_in: 0.01
+  # Visibility threshold (m) used for ECMWF HRES when the NBM run has no visibility
+  # probabilities; normally HRES is judged against NBM's lowest threshold.
+  vis_fallback_m: 400
 
+# A member counts toward a window only if it has data for at least this share
+# of the window's hours (relative to its own output interval).
 min_window_coverage: 0.5
+
+# Open-Meteo sources are refreshed at most this often (global runs are 6-hourly;
+# this keeps well inside the free-tier call limit).
 openmeteo_refresh_hours: 3
 
 sources:
@@ -55,6 +61,7 @@ sources:
     short_fh: 18
     long_fh: 48
 
+  # HREF v3 membership rebuilt from the member models (legacy; retires with RRFS/REFS).
   - id: href
     kind: multi_model
     label: HREF members
@@ -75,11 +82,18 @@ sources:
     components:
       - {id: NAM3k, base: "https://nomads.ncep.noaa.gov/pub/data/nccf/com/nam/prod", file: "nam.{ymd}/nam.t{hh}z.conusnest.hiresf{fh:02d}.tm00.grib2", cycles: [0, 6, 12, 18], lag: 4, max_fh: 60}
 
-  # NBM probabilities: thunder (1/3/6 h) and 1 h precip within the radius; ceiling and
-  # visibility at the site, using the NBM thresholds closest to the limits.
-  - id: nbm_prob
+  - id: nbm
+    kind: openmeteo_det
+    label: NBM
+    family: blend
+    weight: 2
+    model: ncep_nbm_conus
+
+  # NBM probabilities: thunderstorm (1/3/6 h periods, highest value within 30 and 10 nm)
+  # for the lightning rows, and visibility below NBM's lowest threshold for the visibility row.
+  - id: nbm_tstm
     kind: nbm_prob
-    label: NBM probabilities
+    label: NBM thunder and visibility probability
     family: blend
     weight: 2
     base: https://noaa-nbm-grib2-pds.s3.amazonaws.com
@@ -88,107 +102,55 @@ sources:
     max_fh: 192
     max_period_h: 6
 
-  # GFS MOS and LAMP: ceiling and visibility only, at the nearest near-sea-level station
-  # with guidance (candidates tried in order). Best-category forecasts, so each run is one
-  # member; the latest two runs of each are used.
-  - id: gfs_mos
-    kind: mos
-    label: GFS MOS
-    family: mos
-    weight: 1
-    model: GFS
-    runs: 2
-    stations: &mos_stations
-      OCN:
-        - {id: KOKB, lat: 33.219, lon: -117.349}   # Oceanside Municipal, ~28 ft
-        - {id: KNFG, lat: 33.301, lon: -117.355}   # Camp Pendleton MCAS, ~78 ft
-      LOS:
-        - {id: KNTD, lat: 34.120, lon: -119.121}   # Point Mugu NAS, ~13 ft
-        - {id: KOXR, lat: 34.201, lon: -119.207}   # Oxnard, ~43 ft
-      SAND:
-        - {id: KNZY, lat: 32.699, lon: -117.215}   # North Island NAS, ~26 ft
-        - {id: KSAN, lat: 32.734, lon: -117.190}   # San Diego Intl, ~17 ft
-        - {id: KNRS, lat: 32.567, lon: -117.117}   # Imperial Beach NOLF, ~23 ft
-
-  - id: lamp
-    kind: mos
-    label: LAMP
-    family: mos
-    weight: 1
-    model: LAV
-    runs: 2
-    stations: *mos_stations
-
-  # HRRR pressure-level profiles for the marine layer diagnostics (separate files from the
-  # HRRR surface source, so it has its own time budget).
-  - id: hrrr_ml
-    kind: hrrr_profile
-    label: HRRR marine layer
-    family: hires
-    weight: 3
-    base: https://noaa-hrrr-bdp-pds.s3.amazonaws.com
-    file: "hrrr.{ymd}/conus/hrrr.t{hh}z.wrfprsf{fh:02d}.grib2"
-    lag_cycles: 4
-    synoptic_extra: 2
-    budget_min: 12
-
-  # Ensemble aviation probabilities (ceiling and visibility below the thresholds nearest the
-  # limits). REFS replaces HREF when RRFS goes operational; the first base with data wins.
-  - id: refs_avn
-    kind: ensprob
-    label: REFS ceiling/vis probabilities
-    family: hires
-    weight: 3
-    bases:
-      - https://nomads.ncep.noaa.gov/pub/data/nccf/com/refs/prod
-      - https://nomads.ncep.noaa.gov/pub/data/nccf/com/refs/v1.0
-      - https://nomads.ncep.noaa.gov/pub/data/nccf/com/refs/para
-    file: "refs.{ymd}/{hh}/ensprod/refs.t{hh}z.prob.f{fh:02d}.conus.grib2"
-    max_fh: 60
-
-  - id: href_avn
-    kind: ensprob
-    label: HREF ceiling/vis probabilities
-    family: hires
-    weight: 3
-    bases:
-      - https://nomads.ncep.noaa.gov/pub/data/nccf/com/href/prod
-    file: "href.{ymd}/ensprod/href.t{hh}z.conus.prob.f{fh:02d}.grib2"
-    max_fh: 48
-
-  # Gridded LAMP: hourly probabilities of ceiling < 152.4 m (500 ft) and visibility < 1609 m
-  # (1 mi) at each site, every hour out to 38 h (cycles at HH30).
-  - id: glmp
-    kind: ensprob
-    label: Gridded LAMP probabilities
-    family: mos
-    weight: 2
-    cycles: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]
-    bases:
-      - https://nomads.ncep.noaa.gov/pub/data/nccf/com/glmp/prod
-    files:
-      - "glmp.{ymd}/glmp.t{hh}30z.hourly.f{fh:03d}.co.grib2"
-      - "glmp.{ymd}/glmp.t{hh}30z.master.f{fh:03d}.co.grib2"
-    max_fh: 38
-
-  # NBM's own wind distribution (quantile-mapped percentiles). Not a member: the page uses
-  # its mean and 99th percentile directly when NBM is the only wind source switched on.
-  - id: nbm_qmd
-    kind: nbm_qmd
-    role: nbm_pct
-    label: NBM wind percentiles
+  - id: ndfd
+    kind: nws_grid
+    label: NDFD
     family: blend
-    weight: 2
-    base: https://noaa-nbm-grib2-pds.s3.amazonaws.com
-    file: "blend.{ymd}/{hh}/qmd/blend.t{hh}z.qmd.f{fh:03d}.co.grib2"
-    cycles: [0, 6, 12, 18]
-    max_fh: 192
-    percentile: 99
+    weight: 1
 
-  # NBM deterministic wind (feeds the wind statistics as one member).
-  - {id: nbm,       kind: openmeteo_det, label: NBM wind,        family: blend,  weight: 2, model: ncep_nbm_conus, only: [w, d]}   # no ceiling stand-in: NBM has direct ceiling probabilities
-  - {id: ecmwf_ens, kind: openmeteo_ens, label: ECMWF ENS,       family: global, weight: 2, model: ecmwf_ifs025}
-  - {id: aifs_ens,  kind: openmeteo_ens, label: ECMWF AIFS ENS,  family: global, weight: 1, model: ecmwf_aifs025}
-  - {id: gefs,      kind: openmeteo_ens, label: GEFS,            family: global, weight: 1, model: gfs025}
-  - {id: icon_eps,  kind: openmeteo_ens, label: ICON EPS,        family: global, weight: 1, model: icon_seamless}
-  - {id: gem_eps,   kind: openmeteo_ens, label: GEM EPS,         family: global, weight: 1, model: gem_global}
+  # ECMWF HRES 9 km, used only for the visibility row: 1 when visibility is below
+  # the same threshold NBM uses. Must come after nbm_tstm in this list.
+  - id: ecmwf_hres
+    kind: openmeteo_det
+    label: ECMWF HRES visibility
+    family: global
+    weight: 1
+    model: ecmwf_ifs
+    extra_vars: [visibility]
+    only: [vis]
+    within_nbm_range: true   # false = also use HRES alone past NBM's range (reads 0% or 100%)
+
+  - id: ecmwf_ens
+    kind: openmeteo_ens
+    label: ECMWF ENS
+    family: global
+    weight: 2
+    model: ecmwf_ifs025
+
+  - id: aifs_ens
+    kind: openmeteo_ens
+    label: ECMWF AIFS ENS
+    family: global
+    weight: 1
+    model: ecmwf_aifs025
+
+  - id: gefs
+    kind: openmeteo_ens
+    label: GEFS
+    family: global
+    weight: 1
+    model: gfs025
+
+  - id: icon_eps
+    kind: openmeteo_ens
+    label: ICON EPS
+    family: global
+    weight: 1
+    model: icon_seamless
+
+  - id: gem_eps
+    kind: openmeteo_ens
+    label: GEM EPS
+    family: global
+    weight: 1
+    model: gem_global
