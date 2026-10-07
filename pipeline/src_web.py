@@ -18,8 +18,9 @@ from .common import SESSION, Context, SourceResult, log
 ENS_URL = "https://ensemble-api.open-meteo.com/v1/ensemble"
 DET_URL = "https://api.open-meteo.com/v1/forecast"
 VARS = ["wind_speed_10m", "wind_direction_10m", "wind_gusts_10m", "relative_humidity_2m",
-        "temperature_2m", "precipitation", "cloud_cover"]
-_KEY = re.compile(r"^(" + "|".join(VARS + ["visibility"]) + r")(?:_member(\d+))?$")
+        "temperature_2m", "precipitation"]
+OM_CACHE_VERSION = 2          # bump when the variables requested change, so old cached pulls are not reused
+_KEY = re.compile(r"^(" + "|".join(VARS + ["cloud_cover", "visibility"]) + r")(?:_member(\d+))?$")
 
 
 def ring_points(lat, lon):
@@ -128,19 +129,22 @@ def _members(locs, pts, ctx):
 def _cached(scfg, ctx, url):
     """Re-use the last Open-Meteo pull for a few hours to stay inside the free call limit."""
     path = os.path.join(ctx.root, "cache", f"om_{scfg['id']}.json")
+    want_sky = scfg["id"] in ctx.sky_ids
+    sig = f"{OM_CACHE_VERSION}:{int(want_sky)}"
     try:
         with open(path) as f:
             old = json.load(f)
-        if ctx.now - old["fetched"] < ctx.om_refresh_h * 3600:
+        if old.get("sig") == sig and ctx.now - old["fetched"] < ctx.om_refresh_h * 3600:
             mem = {m: {int(t): r for t, r in s.items() if ctx.in_window(int(t))} for m, s in old["members"].items()}
             return mem, time.strftime("%H:%MZ", time.gmtime(old["fetched"])) + " (cached)"
     except (OSError, ValueError, KeyError):
         pass
     pts = ring_points(ctx.lat, ctx.lon)
-    mem = _members(_fetch(url, scfg["model"], ctx, pts, scfg.get("extra_vars", [])), pts, ctx)
+    extra = list(scfg.get("extra_vars", [])) + (["cloud_cover"] if want_sky else [])
+    mem = _members(_fetch(url, scfg["model"], ctx, pts, extra), pts, ctx)
     if mem:
         with open(path, "w") as f:
-            json.dump({"fetched": ctx.now, "members": mem}, f, separators=(",", ":"))
+            json.dump({"fetched": ctx.now, "sig": sig, "members": mem}, f, separators=(",", ":"))
     return mem, time.strftime("%H:%MZ", time.gmtime(ctx.now))
 
 

@@ -13,7 +13,7 @@ import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-log = logging.getLogger("splash")
+log = logging.getLogger("board")
 
 MPH_PER_MS = 2.2369362920544
 FT_TO_M = 0.3048
@@ -166,9 +166,11 @@ class Context:
     radii: list = field(default_factory=list)
     root: str = "."
     om_refresh_h: float = 3.0
-    sites: list = field(default_factory=list)
+    vis_thr_m: float | None = None   # NBM's lowest visibility threshold, set by the NBM source
+    vis_hours: set = field(default_factory=set)   # hours where NBM has a visibility probability
     target_m: float = 10.0
     alpha: float = 0.14
+    sky_ids: tuple = ()           # source ids that supply sky cover (config sky_sources)
 
     def in_window(self, t: int) -> bool:
         return self.t_start <= t <= self.t_end

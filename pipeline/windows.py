@@ -206,19 +206,24 @@ def table(data: dict, cfg: dict, enabled: set | None = None, layout: str = "std"
             row[col] = None if med is None else int(math.floor(med + 0.5))
         # Sky cover: weighted median of members' mean cloud cover over the window, nearest 5 %.
         pairs = []
-        for s in srcs:
-            vals_m = []
-            for m in s["members"]:
-                a = m["v"].get("sky")
-                if not a:
+        for sid in (cfg.get("sky_sources") or ["nbm_tstm", "nbm"]):    # first listed source with data wins
+            for s in srcs:
+                if s["id"] != sid:
                     continue
-                v = [a[i] for i in hours if a[i] is not None]
-                if len(v) >= max(1, math.floor(cov * nh / steps[(s["id"], m["id"], "sky")])):
-                    acc = 0.0
-                    for x in v:               # plain left-to-right sum, same as the page
-                        acc += x
-                    vals_m.append(acc / len(v))
-            pairs += [(x, s["weight"] / len(vals_m)) for x in vals_m]
+                vals_m = []
+                for m in s["members"]:
+                    a = m["v"].get("sky")
+                    if not a:
+                        continue
+                    v = [a[i] for i in hours if a[i] is not None]
+                    if len(v) >= max(1, math.floor(cov * nh / steps[(s["id"], m["id"], "sky")])):
+                        acc = 0.0
+                        for x in v:           # plain left-to-right sum, same as the page
+                            acc += x
+                        vals_m.append(acc / len(v))
+                pairs += [(x, s["weight"] / len(vals_m)) for x in vals_m]
+            if pairs:
+                break
         med = _wmedian(pairs)
         row["sky"] = None if med is None else int(math.floor(med / 5 + 0.5) * 5)
         row["sources"] = len(used)

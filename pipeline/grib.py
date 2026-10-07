@@ -30,10 +30,9 @@ except ImportError:
 POINT = {
     "u10": r":UGRD:10 m above ground:",
     "v10": r":VGRD:10 m above ground:",
-    "ceil": r":HGT:cloud ceiling:",
-    "vis": r":VIS:surface:",
-    "t2": r":TMP:2 m above ground:",
-    "td2": r":DPT:2 m above ground:",
+    "g0": r":GUST:surface:",
+    "rh": r":RH:2 m above ground:",
+    "t": r":TMP:2 m above ground:",
 }
 AREA = {
     "refd": r":REFD:1000 m above ground:",
@@ -131,24 +130,21 @@ def _grid_key(gid):
         "gridType", "Ni", "Nj", "latitudeOfFirstGridPointInDegrees", "longitudeOfFirstGridPointInDegrees"))
 
 
-def _masks(gid, sites, radius_nm):
-    """{site_id: grid indices within radius_nm of the site} (computed once per grid)."""
-    key = (_grid_key(gid), tuple((x["id"], x["lat"], x["lon"]) for x in sites), radius_nm)
+def _masks(gid, lat, lon, radii_nm):
+    key = (_grid_key(gid), lat, lon, tuple(radii_nm))
     with _MASK_LOCK:
         if key in _MASKS:
             return _MASKS[key]
     lats = np.asarray(eccodes.codes_get_array(gid, "latitudes"))
     lons = np.asarray(eccodes.codes_get_array(gid, "longitudes"))
-    out = {}
-    for x in sites:
-        p1, p2 = math.radians(x["lat"]), np.radians(lats)
-        dl = np.radians(((lons - x["lon"] + 180) % 360) - 180)
-        a = np.sin((p2 - p1) / 2) ** 2 + math.cos(p1) * np.cos(p2) * np.sin(dl / 2) ** 2
-        d = 2 * 6371000.0 * np.arcsin(np.sqrt(np.clip(a, 0, 1))) / NM
-        out[x["id"]] = np.nonzero(d <= radius_nm)[0]
+    p1, p2 = math.radians(lat), np.radians(lats)
+    dl = np.radians(((lons - lon + 180) % 360) - 180)
+    a = np.sin((p2 - p1) / 2) ** 2 + math.cos(p1) * np.cos(p2) * np.sin(dl / 2) ** 2
+    dist_nm = 2 * 6371000.0 * np.arcsin(np.sqrt(np.clip(a, 0, 1))) / NM
+    m = {r: np.nonzero(dist_nm <= r)[0] for r in radii_nm}
     with _MASK_LOCK:
-        _MASKS[key] = out
-    return out
+        _MASKS[key] = m
+    return m
 
 
 def _nearest(gid, lat, lon):
@@ -173,7 +169,7 @@ def _meta(gid) -> dict:
     return meta
 
 
-def _decode(blob: bytes, jobs: list, sites, radius) -> list:
+def _decode(blob: bytes, jobs: list, lat, lon, radii) -> list:
     """jobs[i] = 'point' | 'area' for the i-th message in blob."""
     out = []
     fd, path = tempfile.mkstemp(suffix=".grib2")
@@ -190,18 +186,15 @@ def _decode(blob: bytes, jobs: list, sites, radius) -> list:
                     job = jobs[i] if i < len(jobs) else None
                     miss = eccodes.codes_get(gid, "missingValue")
                     if job == "point":
-                        res = {}
-                        for x in sites:
-                            v = _nearest(gid, x["lat"], x["lon"])
-                            res[x["id"]] = None if abs(v - miss) < 1e-6 or abs(v) > 1e10 else v
-                        out.append((res, _meta(gid)))
+                        v = _nearest(gid, lat, lon)
+                        out.append((None if abs(v - miss) < 1e-6 or abs(v) > 1e10 else v, _meta(gid)))
                     elif job == "area":
                         vals = np.asarray(eccodes.codes_get_values(gid))
                         res = {}
-                        for sid, idx in _masks(gid, sites, radius).items():
+                        for r, idx in _masks(gid, lat, lon, radii).items():
                             sub = vals[idx]
                             sub = sub[(np.abs(sub - miss) > 1e-6) & (np.abs(sub) < 1e10)]
-                            res[sid] = float(sub.max()) if sub.size else None
+                            res[r] = float(sub.max()) if sub.size else None
                         out.append((res, {}))
                     else:
                         out.append((None, {}))
@@ -234,32 +227,30 @@ def _multipart(resp) -> list[tuple[int, bytes]]:
     return parts
 
 
-def fetch(grib_url: str, sites: list, radius_nm: float) -> tuple[dict, dict]:
-    """values[field] = {site_id: value}: nearest grid point for POINT fields, maximum within
-    radius_nm for AREA fields. A field present in the file but undefined at a point gives None.
-    Raises Missing."""
+def fetch(grib_url: str, lat: float, lon: float, radii_nm: list[float]) -> tuple[dict, dict]:
+    """values: point fields as floats; area fields as {radius: max}. Raises Missing."""
     if eccodes is None:
         raise RuntimeError("eccodes not installed")
     inv = read_idx(grib_url + ".idx")
     kinds = {**{k: "point" for k in POINT}, **{k: "area" for k in AREA}}
     found = sorted(match_fields(inv, {**POINT, **AREA}).items(), key=lambda kv: kv[1][1])
-    return _fetch_found(grib_url, found, kinds, sites, radius_nm)
+    return _fetch_found(grib_url, found, kinds, lat, lon, radii_nm)
 
 
-def fetch_select(grib_url: str, select, sites: list, radius_nm: float) -> dict:
-    """select(inventory) -> [(name, record, "point"|"area")]."""
+def fetch_select(grib_url: str, select, lat: float, lon: float, radii_nm: list[float]) -> tuple[dict, dict]:
+    """select(inventory) -> [(name, record, "point"|"area")]. Returns (values, meta). Raises Missing."""
     if eccodes is None:
         raise RuntimeError("eccodes not installed")
     inv = read_idx(grib_url + ".idx")
     chosen = select(inv)
     found = sorted(((n, r) for n, r, _ in chosen), key=lambda kv: kv[1][1])
-    vals, _ = _fetch_found(grib_url, found, {n: k for n, _, k in chosen}, sites, radius_nm)
-    return vals
+    return _fetch_found(grib_url, found, {n: k for n, _, k in chosen}, lat, lon, radii_nm)
 
 
-def _fetch_found(grib_url, found, kinds, sites, radius_nm):
+def _fetch_found(grib_url, found, kinds, lat, lon, radii_nm):
     if not found:
         return {}, {}
+
     # contiguous runs of whole messages; a sub-message record stands alone
     groups: list[list] = []
     for name, rec in found:
@@ -301,10 +292,10 @@ def _fetch_found(grib_url, found, kinds, sites, radius_nm):
         if len(g) == 1 and not g[0][2]:
             k = int(g[0][1][0].split(".")[1]) - 1
             jobs = [None] * k + [kinds[g[0][0]]]
-            dec = _decode(blob, jobs, sites, radius_nm)
+            dec = _decode(blob, jobs, lat, lon, radii_nm)
             pairs = [(g[0][0], dec[k] if k < len(dec) else (None, {}))]
         else:
-            dec = _decode(blob, [kinds[n] for n, _, _ in g], sites, radius_nm)
+            dec = _decode(blob, [kinds[n] for n, _, _ in g], lat, lon, radii_nm)
             pairs = [(n, dec[i] if i < len(dec) else (None, {})) for i, (n, _, _) in enumerate(g)]
         for n, (v, m) in pairs:
             vals[n], meta[n] = v, m

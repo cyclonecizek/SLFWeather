@@ -52,7 +52,8 @@ def build(cfg: dict, only: set | None = None) -> dict:
 
     cache = PointCache(os.path.join(ROOT, "cache", "points.json"))
     cache.prune(now - 4 * 86400)
-    ctx = Context(now=now, lat=float(cfg["site"]["lat"]), lon=float(cfg["site"]["lon"]),
+    sky_ids = tuple(cfg.get("sky_sources") or ["nbm_tstm", "nbm"])
+    ctx = Context(now=now, lat=float(cfg["site"]["lat"]), lon=float(cfg["site"]["lon"]), sky_ids=sky_ids,
                   t_start=t_start, t_end=t_end, cache=cache, cons=cons, radii=radii, root=ROOT,
                   om_refresh_h=float(cfg.get("openmeteo_refresh_hours", 3)))
 
@@ -74,7 +75,7 @@ def build(cfg: dict, only: set | None = None) -> dict:
                 if i is None:
                     continue
                 for k in VARS:
-                    if k in rec:
+                    if k in rec and (k != "sky" or scfg["id"] in sky_ids):
                         v[k][i] = _round(k, rec[k])
             v = {k: a for k, a in v.items() if any(x is not None for x in a)}
             if v:
@@ -90,7 +91,7 @@ def build(cfg: dict, only: set | None = None) -> dict:
             "runway_heading_true": cfg["runway_heading_true"], "constraints": cons,
             "windows": cfg["windows"], "days": days,
             "min_window_coverage": cfg.get("min_window_coverage", 0.5),
-            "fine_layout": cfg.get("fine_layout"),
+            "fine_layout": cfg.get("fine_layout"), "sky_sources": list(sky_ids),
             "times": timeline, "sources": sources}
 
 
