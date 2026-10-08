@@ -13,7 +13,7 @@ import time
 
 import yaml
 
-from . import src_ncep, src_web, windcsv, windows
+from . import gfs_upper, src_ncep, src_web, windcsv, windows
 from .common import Context, PointCache, SourceResult, floor_hour, iso, log
 
 KINDS = {
@@ -129,6 +129,10 @@ def main(argv=None):
             f.write(text)
         os.replace(path + ".tmp", path)
         log.info("wrote %s (%d rows)", os.path.basename(path), text.count("\n") - 1)
+    try:
+        gfs_upper.publish(cfg, out, data["generated_unix"])
+    except Exception as e:                       # the extra files must never take the board down
+        log.warning("GFS upper-air files: %s", e)
     log.info("wrote board.json (%.0f kB), constraints.csv (%d windows) and constraints_fine.csv (%d blocks)",
              os.path.getsize(os.path.join(out, "board.json")) / 1024, len(rows), len(fine))
     return 0

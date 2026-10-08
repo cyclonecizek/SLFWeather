@@ -71,11 +71,43 @@ longer window that contains it. High/Low keep the standard definitions (00-11L m
 maximum) and span the blocks they cover. The hourly run publishes `docs/data/constraints.csv`
 (Standard) and `docs/data/constraints_fine.csv` (Fine); the page's **Download CSV for Excel**
 button saves whichever layout is showing (`Constraint_Plume.csv` or `Constraint_Plume_Fine.csv`).
-In the Fine layout the grid has a **Sky cover** row (each member's average cloud cover over the block,
-weighted median across NBM, NDFD and the global ensembles, nearest 5%) and the Fine CSV carries it in a
-last `sky_pct` column; the Standard CSV is unchanged. Sky cover is requested from Open-Meteo as an optional
-variable: if a model rejects it, only sky cover is dropped, never the winds. The companion 7-Day Fine workbook imports the Fine CSV. The block lengths are under `fine_layout` in
+In the Fine layout the grid has a **Sky cover** row and the Fine CSV carries it in a last `sky_pct`
+column; the Standard CSV is unchanged. Sky cover is NBM's total cloud cover (the `TCDC` field in NBM's
+GRIB files, fetched together with the thunder and visibility probabilities) averaged over each block
+and rounded to the nearest 5%. If that is unavailable it falls back to Open-Meteo's NBM. `sky_sources`
+in `config.yaml` sets which sources are used, in order. The companion 7-Day Fine workbook imports the Fine CSV. The block lengths are under `fine_layout` in
 `config.yaml`. `windows.py` and the page's `windowList` / `windowTable` must stay in step.
+
+## Editing numbers, edited CSV and HTML export
+
+**Edit numbers** (button in the toolbar) lets you change any probability, High/Low or sky cover cell:
+click a number and type. Enter saves, Tab moves to the next cell to the right, Esc cancels, and leaving
+it blank restores the model value. Probabilities and sky cover round to the nearest 5%, temperatures to
+the nearest degree. Edited cells are outlined, and hovering shows the model value.
+
+- Edits are saved in your browser (per layout, dropped after 3 days) and never change the published data.
+- **Download CSV for Excel** includes your edits, with the same columns as before; the file is named
+  `Constraint_Plume_edited.csv` / `Constraint_Plume_Fine_edited.csv` when there are any. The workbook
+  imports it exactly like the unedited file, and your numbers arrive as its Guidance values.
+- **Export HTML** saves the table as a standalone page (edited cells marked, with the board and export times).
+- **Clear edits** returns the current layout to the model numbers.
+
+## Save as PDF and GFS upper-air files
+
+**Save as PDF** (toolbar) opens the browser's print window with the current table, edits included, laid out on
+one landscape Letter page; choose "Save as PDF" as the destination. Nothing is uploaded.
+
+**GFS upper air** has two buttons that download what the GFS model-data workbook imports, published by the
+hourly run (`pipeline/gfs_upper.py`, settings under `gfs_upper_air` in `config.yaml`):
+
+- **BUFKIT**: Penn State's GFS sounding for the station (default XMR), copied unchanged to `docs/data/gfs3_xmr.buf`.
+  Import it on the workbook's BUFKIT Import tab and set GFS Calc B2 to "BUFKIT file".
+- **CSV**: Open-Meteo GFS at the workbook's point, built exactly as its macro builds it, in
+  `docs/data/GFS_upper_air_KTTS.csv`. Import it on the GFS Data tab and set B2 to "Open-Meteo".
+
+Each is refreshed every `refresh_hours` (default 3) and replaced only by a complete, valid download, so a failed
+fetch keeps the previous file (the page says so). The files change about four times a day, so the repository
+grows slowly; set `enabled: false` under `gfs_upper_air` (or under either product) to stop publishing.
 
 ## Change limits or sources
 

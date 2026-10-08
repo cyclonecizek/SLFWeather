@@ -69,6 +69,15 @@ td.na { color: var(--muted); background: color-mix(in srgb, var(--rule) 40%, var
 td.temp { background: color-mix(in srgb, var(--rule) 40%, var(--panel)); }
 td.past { opacity: .45; }
 td.sky { font-weight: 500; color: var(--ink); }
+table.g.editing td[data-col] { cursor: text; }
+table.g.editing td[data-col]:hover { outline: 2px dashed var(--ink); outline-offset: -2px; }
+td.edited { box-shadow: inset 0 0 0 2px var(--ink); font-style: italic; }
+.cell-in { width: 100%; min-width: 32px; box-sizing: border-box; text-align: center; font: inherit; font-weight: 700; border: 2px solid var(--ink); border-radius: 3px; background: #fff; color: #000; padding: 2px 0; }
+.btn.ghost.on { background: var(--ink); color: var(--panel); border-color: var(--ink); }
+.editinfo { color: var(--muted); }
+.btn.disabled { opacity: .45; pointer-events: none; }
+.gfs { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
+.gfs .lab { color: var(--muted); font-weight: 500; }
 table.g.fine { border-spacing: 2px 2px; }
 table.g.fine th { font-size: 12px; padding: 3px 1px; }
 table.g.fine td { min-width: 36px; padding: 7px 1px; font-size: 13px; }
@@ -146,10 +155,21 @@ table.cw td.bar2 { width: 34%; }
     </select>
   </label>
   <button class="btn" id="dl" type="button">Download CSV for Excel</button>
+  <button class="btn ghost" id="editBtn" type="button" aria-pressed="false" title="Click numbers in the table to change them">Edit numbers</button>
+  <button class="btn ghost" id="clearEdits" type="button" hidden>Clear edits</button>
+  <button class="btn ghost" id="exportHtml" type="button" title="Save the table as a standalone HTML file">Export HTML</button>
+  <button class="btn ghost" id="savePdf" type="button" title="Opens the print window; choose Save as PDF as the destination">Save as PDF</button>
   <button class="btn ghost" id="copy" type="button">Copy published CSV link</button>
   <a class="btn ghost" href="data/KTTS_NBM_wind.csv" download="KTTS_NBM_wind.csv" title="NBM alone, GSL NBM file layout">Wind CSV: NBM</a>
   <a class="btn ghost" href="data/KTTS_ENS_wind.csv" download="KTTS_ENS_wind.csv" title="All sources blended, GSL NBM file layout">Wind CSV: ensemble</a>
+  <span class="gfs" id="gfsgrp">
+    <span class="lab">GFS upper air</span>
+    <a class="btn ghost disabled" id="gfsBuf" href="data/gfs3_xmr.buf" download aria-disabled="true" title="Penn State BUFKIT sounding: import on the GFS workbook's BUFKIT Import tab">BUFKIT</a>
+    <a class="btn ghost disabled" id="gfsCsv" href="data/GFS_upper_air_KTTS.csv" download aria-disabled="true" title="Open-Meteo GFS CSV: import on the GFS workbook's GFS Data tab">CSV</a>
+    <span class="hint" id="gfsinfo">Checking…</span>
+  </span>
   <span class="hint" id="dlhint">The CSV uses the sources switched on below.</span>
+  <span class="hint editinfo" id="editinfo"></span>
 </div>
 <div id="banners"></div>
 
@@ -196,7 +216,9 @@ table.cw td.bar2 { width: 34%; }
 <section class="method">
   <p><b>Window chance.</b> A member counts as a hit if any hour it has inside the window breaks the limit. Each source's chance is its share of hits; sources are weight-averaged and the result is rounded to the nearest 5%. A member only counts if it covers at least half of the window.</p>
   <p><b>Winds</b> use the 10 m gust with runway 15/33 at 330° true: crosswind is gust × |sin(angle)| over 10 kt, head/tail is |gust × cos(angle)| over 15 kt. <b>Precip within 30 nm</b> is 1 km reflectivity of 20 dBZ or more anywhere within 30 nm for HRRR, HREF members and NAM, and 0.01 in/hr at any of 13 sample points out to 25 nm for NBM and the global ensembles. <b>Lightning</b> uses only models with explicit lightning output: the hi-res lightning field (HRRR and any member model that carries it) anywhere within 30 and 10 nm, and NBM's 1, 3 and 6 h thunderstorm probability, taking its highest value within each radius. Global ensembles and blends without a lightning parameter don't feed the lightning rows. <b>Visibility under 200 ft</b> uses NBM's probability of visibility below its lowest threshold at the site, plus the ECMWF HRES run judged against that same threshold (the threshold is listed under Sources). That threshold is well above 200 ft, so treat the value as an upper bound. NBM carries it only for the first few days, and HRES is used over the same hours so a single run never sets the value alone. <b>High/Low</b> are the weighted median of members' 11–18L maximum and 00–11L minimum.</p>
-  <p><b>Fine time blocks.</b> The dropdown switches to 3-hour blocks for days 1–5 and 6-hour blocks for days 6–7, starting today. The rules are the same, applied to each block, so a block's chance is usually lower than the standard window that contains it: a short block has fewer hours in which a member can break a limit. High/Low keep the standard definitions (the 00–11L minimum and 11–18L maximum) and span the blocks they cover. <b>Sky cover</b> (fine layout) is each member's average cloud cover over the block; the value is the weighted median across NBM, NDFD and the global ensembles, rounded to the nearest 5%.</p>
+  <p><b>Fine time blocks.</b> The dropdown switches to 3-hour blocks for days 1–5 and 6-hour blocks for days 6–7, starting today. The rules are the same, applied to each block, so a block's chance is usually lower than the standard window that contains it: a short block has fewer hours in which a member can break a limit. High/Low keep the standard definitions (the 00–11L minimum and 11–18L maximum) and span the blocks they cover. <b>Editing.</b> Turn on <i>Edit numbers</i> to change any probability, High/Low or sky cover value (probabilities and sky round to the nearest 5%). Edits are kept in this browser, outlined in the table, included in <i>Download CSV for Excel</i> (saved as <i>_edited.csv</i>) and in <i>Export HTML</i>, and never change the published data. They apply to the layout they were made in.</p>
+  <p><b>Save as PDF</b> opens the browser's print window with the table laid out on one landscape page; choose "Save as PDF" as the destination. <b>GFS upper air</b> downloads the files the GFS model-data workbook imports: the Penn State BUFKIT sounding (XMR) and an Open-Meteo GFS CSV, both refreshed every few hours by the hourly run.</p>
+  <p><b>Sky cover</b> (fine layout) is NBM's total cloud cover averaged over the block, rounded to the nearest 5%. It uses NBM's own GRIB output and falls back to Open-Meteo's NBM if that is unavailable.</p>
 </section>
 
 <script>
@@ -220,7 +242,7 @@ const ROWS = [
 const LTNG = new Set(["l30", "l10", "vis"]);
 const FAMS = [["hires", "All hi-res"], ["blend", "All blends"], ["global", "All global ens"]];
 const $ = s => document.querySelector(s);
-const state = { data: null, enabled: {}, rows: [], sel: null, layout: "std", cons: "p30", hourly: null,
+const state = { data: null, enabled: {}, rows: [], sel: null, layout: "std", cons: "p30", hourly: null, edits: { std: {}, fine: {} }, editMode: false, editor: null,
   cw: { a: null, b: null }, cwInc: new Set(["p30", "l30", "l10", "xw", "ht", "vis", "rhx"]) };
 const store = {
   get(k) { try { return localStorage.getItem(k); } catch { return null; } },
@@ -336,16 +358,20 @@ function windowTable() {
       }
       const med = wmedian(pairs); row[col] = med == null ? null : Math.round(med);
     }
-    {                                            // sky cover: weighted median of members' mean cloud cover, nearest 5 %
-      const pairs = [];
-      for (const s of srcs) {
-        const vm = [];
-        for (const m of s.members) {
-          const a = m.v.sky; if (!a) continue;
-          const v = hours.map(i => a[i]).filter(x => x != null);
-          if (v.length >= Math.max(1, Math.floor(cov * nh / m.step.sky))) { let acc = 0; for (const x of v) acc += x; vm.push(acc / v.length); }
+    {                                            // sky cover: mean cloud cover over the block from the first listed source that has data, nearest 5 %
+      let pairs = [];
+      for (const sid of (d.sky_sources || ["nbm_tstm", "nbm"])) {
+        for (const s of srcs) {
+          if (s.id !== sid) continue;
+          const vm = [];
+          for (const m of s.members) {
+            const a = m.v.sky; if (!a) continue;
+            const v = hours.map(i => a[i]).filter(x => x != null);
+            if (v.length >= Math.max(1, Math.floor(cov * nh / m.step.sky))) { let acc = 0; for (const x of v) acc += x; vm.push(acc / v.length); }
+          }
+          vm.forEach(x => pairs.push([x, s.weight / vm.length]));
         }
-        vm.forEach(x => pairs.push([x, s.weight / vm.length]));
+        if (pairs.length) break;
       }
       const med = wmedian(pairs); row.sky = med == null ? null : Math.floor(med / 5 + 0.5) * 5;
     }
@@ -456,8 +482,149 @@ function toCSV(rows) {
 }
 function download() {
   const blob = new Blob([toCSV(state.rows)], { type: "text/csv" });
-  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = CSV_FILES[state.layout];
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = editCount() ? CSV_FILES[state.layout].replace(".csv", "_edited.csv") : CSV_FILES[state.layout];
   document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+
+// ---------- forecaster edits (kept in this browser; they go into the CSV and the HTML export)
+const EDIT_COLS = ["precip30", "ltng30", "ltng10", "xwind", "headtail", "vis200", "rh98", "low_f", "high_f", "sky"];
+const isTemp = c => c === "low_f" || c === "high_f";
+const r5 = x => Math.floor(x / 5 + 0.5) * 5;
+function colName(c) { const R = ROWS.find(x => x.col === c); return R ? `${R.name} ${R.sub}` : c === "low_f" ? "Low temperature" : c === "high_f" ? "High temperature" : "Sky cover"; }
+function loadEdits() {
+  let e; try { e = JSON.parse(store.get("board.edits") || "null"); } catch { e = null; }
+  const out = { std: {}, fine: {} }, cut = Date.now() / 1000 - 3 * 86400;      // edits for windows older than 3 days are dropped
+  for (const L of ["std", "fine"]) for (const [k, f] of Object.entries((e && e[L]) || {})) {
+    const t = Date.UTC(+k.slice(0, 4), +k.slice(4, 6) - 1, +k.slice(6, 8), +k.slice(8, 10)) / 1000;
+    if (!(t >= cut) || !f || typeof f !== "object") continue;
+    const keep = {}; for (const c of EDIT_COLS) if (Number.isFinite(f[c])) keep[c] = f[c];
+    if (Object.keys(keep).length) out[L][k] = keep;
+  }
+  return out;
+}
+const saveEdits = () => store.set("board.edits", JSON.stringify(state.edits));
+const editCount = () => Object.values(state.edits[state.layout]).reduce((n, f) => n + Object.keys(f).length, 0);
+function applyEdits(rows) {
+  const ed = state.edits[state.layout], fine = state.layout === "fine";
+  for (const r of rows) {
+    r.edited = new Set(); r.model = {};
+    const f = ed[String(r.key)]; if (!f) continue;
+    for (const [c, v] of Object.entries(f)) {
+      if (c === "sky" && !fine) continue;
+      if (isTemp(c) && r.tl !== (c === "low_f" ? "low" : "high")) continue;     // only the block that carries the Low / High
+      r.model[c] = r[c] ?? null; r[c] = v; r.edited.add(c);
+    }
+  }
+  return rows;
+}
+function commitEdit(i, col, text) {
+  const r = state.rows[i], k = String(r.key), ed = state.edits[state.layout];
+  const t = String(text).trim().replace(/%$/, "").trim(), model = col in r.model ? r.model[col] : r[col];
+  const drop = () => { if (ed[k]) { delete ed[k][col]; if (!Object.keys(ed[k]).length) delete ed[k]; } };
+  if (t === "") drop();
+  else {
+    const x = Number(t);
+    if (!Number.isFinite(x)) { $("#editinfo").textContent = `"${t}" is not a number, so nothing was changed.`; grid(); return; }
+    const v = isTemp(col) ? Math.max(-50, Math.min(150, Math.round(x))) : r5(Math.max(0, Math.min(100, x)));
+    if (v === model) drop(); else (ed[k] = ed[k] || {})[col] = v;
+  }
+  saveEdits(); recompute();
+}
+function openEditor(i, col) {
+  const td = $("#grid").querySelector(`td[data-i="${i}"][data-col="${col}"]`); if (!td) return;
+  const r = state.rows[i], inp = document.createElement("input");
+  inp.type = "text"; inp.inputMode = "numeric"; inp.className = "cell-in"; inp.autocomplete = "off";
+  inp.value = r[col] == null ? "" : String(r[col]);
+  inp.setAttribute("aria-label", `${colName(col)}, ${r.date} ${r.label}`);
+  td.textContent = ""; td.appendChild(inp); inp.focus(); inp.select();
+  let done = false;
+  const finish = commit => { if (done) return; done = true; state.editor = null; commit ? commitEdit(i, col, inp.value) : grid(); };
+  state.editor = finish;
+  inp.addEventListener("keydown", e => {
+    e.stopPropagation();                                     // do not let the key reach the cell and reopen the box
+    if (e.key === "Enter") { e.preventDefault(); finish(true); }
+    else if (e.key === "Escape") { e.preventDefault(); finish(false); }
+    else if (e.key === "Tab") {
+      e.preventDefault();
+      const cells = [...td.parentElement.querySelectorAll("td[data-col]")], nx = cells[cells.indexOf(td) + (e.shiftKey ? -1 : 1)];
+      const to = nx ? { i: +nx.dataset.i, col: nx.dataset.col } : null;
+      finish(true); if (to) openEditor(to.i, to.col);
+    }
+  });
+  inp.addEventListener("blur", () => finish(true));
+}
+function editUI() {
+  const n = editCount();
+  $("#clearEdits").hidden = n === 0; $("#clearEdits").textContent = `Clear ${n} edit${n > 1 ? "s" : ""}`;
+  $("#editinfo").textContent = state.editMode ? "Click a number to change it. Enter saves, Tab moves right, Esc cancels, blank restores the model value." : (n ? `${n} cell${n > 1 ? "s" : ""} edited` : "");
+}
+function buildHTML(opt = {}) {
+  grid();                                                    // closes any open editor
+  const d = state.data, n = editCount(), fine = state.layout === "fine";
+  const when = new Intl.DateTimeFormat("en-US", { timeZone: TZ, dateStyle: "medium", timeStyle: "short" }).format(new Date());
+  const body = $("#grid").innerHTML.replace(/ (data-i|data-col|tabindex)="[^"]*"/g, "").replace(/(class="[^"]*?) sel\b/g, "$1");
+  const styles = [...document.querySelectorAll("style")].map(x => x.textContent).join("\n");
+  const pdf = !!opt.pdf;
+  return `<!doctype html>
+<html lang="en"${pdf ? ' data-theme="light"' : ""}><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>7-Day Constraint Probabilities</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+${styles}
+body { padding: 18px; } .snap-note { color: var(--muted); margin: 4px 0 12px; } table.g td.p { cursor: default; }
+table.leg { border-spacing: 6px 0; margin: 0 0 12px; } table.leg td { padding: 3px 12px; font-weight: 600; min-width: 0; }
+${pdf ? `@page { size: landscape; margin: 0.3in; }
+html, body { background: #fff !important; } body { padding: 0; }
+* { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+h1 { font-size: 22px !important; } .snap-note { margin-bottom: 8px; }
+.grid-scroll { overflow: visible; } table.g { border-spacing: 1px; min-width: 0; } table.g td.rowh { position: static; }
+table.g.fine td { min-width: 24px; padding: 4px 0; font-size: 11.5px; } table.g.fine th { font-size: 10px; padding: 2px 0; }
+table.g.fine td.dstart, table.g.fine th.dstart { border-left-width: 4px; }` : ""}
+</style></head><body>
+<h1 style="margin:0 0 4px">7-Day Constraint Probabilities</h1>
+<div class="snap-note">${$("#where").textContent}<br>Board updated ${d.generated.slice(11, 16)}Z ${d.generated.slice(0, 10)}. Exported ${when} (${TZ.split("/").pop().replace("_", " ")} time).${n ? ` ${n} cell${n > 1 ? "s were" : " was"} edited by the forecaster (outlined, italic).` : ""}</div>
+<table class="g leg"><tr><td class="s">Slight &lt;20%</td><td class="m">Marginal 20&ndash;50%</td><td class="v">Significant &gt;50%</td>${n ? '<td class="temp edited">Edited</td>' : ""}</tr></table>
+<div class="grid-scroll"><table class="g main${fine ? " fine" : ""}">${body}</table></div>
+</body></html>`;
+}
+function exportHTML() {
+  const p = parts(Date.now()), name = `Constraint_Probabilities_${state.layout}_${p.year}${p.month}${p.day}_${p.hour}${p.minute}.html`;
+  const blob = new Blob([buildHTML()], { type: "text/html" });
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+
+// Save as PDF: the snapshot is laid out for one landscape page in a hidden frame and sent to the browser's print
+// window, where "Save as PDF" is a destination. Nothing is uploaded anywhere.
+async function savePDF() {
+  document.querySelectorAll("iframe.pdf-frame").forEach(x => x.remove());
+  const f = document.createElement("iframe"); f.className = "pdf-frame"; f.setAttribute("aria-hidden", "true");
+  f.style.cssText = "position:fixed;left:-10000px;top:0;width:1100px;height:800px;border:0";
+  f.srcdoc = buildHTML({ pdf: true });             // set before attaching, so the first load is the real document
+  document.body.appendChild(f);
+  let d = null;                                    // wait until the table itself exists (an empty frame also fires "load")
+  for (let i = 0; i < 80 && !(d && d.readyState === "complete" && d.querySelector("table.main")); i++) { await new Promise(r => setTimeout(r, 100)); d = f.contentDocument; }
+  const t = d && d.querySelector("table.main");
+  if (!t) { $("#editinfo").textContent = "Could not prepare the PDF; use Export HTML instead."; f.remove(); return; }
+  try { await Promise.race([d.fonts.ready, new Promise(r => setTimeout(r, 2500))]); } catch {}
+  const avail = 990;                               // printable width of a landscape Letter page (10.3 in), in CSS px
+  if (t.scrollWidth > avail) t.style.zoom = (avail / t.scrollWidth).toFixed(3);
+  try { f.contentWindow.focus(); f.contentWindow.print(); } catch (e) { $("#editinfo").textContent = "Could not open the print window; use Export HTML instead."; return; }
+  if (!state.editMode) $("#editinfo").textContent = 'In the print window, set the destination to "Save as PDF".';
+  setTimeout(() => f.remove(), 120000);
+}
+async function loadGfs() {
+  const set = (el, on, file) => { el.classList.toggle("disabled", !on); el.setAttribute("aria-disabled", String(!on)); if (file) { el.href = "data/" + file; el.download = file; } };
+  const when = iso => { const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(iso || ""); return m ? `${m[4]}Z ${+m[3]} ${["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][+m[2] - 1]}` : null; };
+  let m;
+  try { const r = await fetch("data/gfs_meta.json?t=" + Date.now(), { cache: "no-store" }); if (!r.ok) throw new Error(r.status); m = await r.json(); }
+  catch { set($("#gfsBuf"), false); set($("#gfsCsv"), false); $("#gfsinfo").textContent = "Available after the next scheduled run."; return; }
+  const b = m.bufkit || {}, c = m.csv || {}, bits = [];
+  set($("#gfsBuf"), !!b.available, b.file); set($("#gfsCsv"), !!c.available, c.file);
+  if (b.available) bits.push(`BUFKIT ${b.station || ""}: ${when(b.run) || "run time unknown"} run${b.ok === false ? " (last refresh failed; previous file)" : ""}`);
+  if (c.available) bits.push(`CSV: from ${when(c.run) || "unknown"}${c.ok === false ? " (last refresh failed; previous file)" : ""}`);
+  $("#gfsinfo").textContent = bits.length ? bits.join(" · ") : "Not available yet; the next scheduled run should publish it.";
 }
 
 // ---------- grid
@@ -466,7 +633,7 @@ function grid() {
   const rows = state.rows, now = Date.now() / 1000, todayKey = parts(Date.now()).year + parts(Date.now()).month + parts(Date.now()).day;
   const fine = state.layout === "fine", dstart = r => fine && r.w === 1 ? " dstart" : "";
   const days = []; rows.forEach(r => { const g = days[days.length - 1]; if (g && g.date === r.date) g.n++; else days.push({ date: r.date, n: 1 }); });
-  $("#grid").className = "g" + (fine ? " fine" : "");
+  $("#grid").className = "g" + (fine ? " fine" : "") + (state.editMode ? " editing" : "");
   let h = "<thead><tr><th></th>";
   for (const g of days) {
     const [y, m, dd] = g.date.split("-"), wd = new Date(Date.UTC(+y, +m - 1, +dd)).toLocaleDateString("en-US", { weekday: "long", timeZone: "UTC" });
@@ -475,9 +642,9 @@ function grid() {
   }
   h += "</tr><tr><th></th>" + rows.map(r => `<th class="${dstart(r).trim()}">${r.label}</th>`).join("") + "</tr></thead><tbody>";
   if (fine) {
-    h += `<tr><td class="rowh">Sky cover<small>% of sky</small></td>` + rows.map(r => {
-      const v = r.sky, past = r.b <= now ? " past" : "";
-      return `<td class="sky${past}${dstart(r)}" style="${v == null ? "" : `background:color-mix(in srgb, var(--global) ${Math.round(8 + v * 0.7)}%, var(--panel))`}">${v == null ? "–" : v}</td>`;
+    h += `<tr><td class="rowh">Sky cover<small>% of sky</small></td>` + rows.map((r, i) => {
+      const v = r.sky, past = r.b <= now ? " past" : "", ed = r.edited.has("sky");
+      return `<td class="sky${past}${dstart(r)}${ed ? " edited" : ""}" data-i="${i}" data-col="sky"${state.editMode ? ' tabindex="0"' : ""}${ed ? ` title="Edited. Model: ${r.model.sky ?? "–"}%"` : ""} style="${v == null ? "" : `background:color-mix(in srgb, var(--global) ${Math.round(8 + v * 0.7)}%, var(--panel))`}">${v == null ? "–" : v}</td>`;
     }).join("") + "</tr>";
   }
   h += `<tr><td class="rowh">High/Low<small>°F</small></td>`;
@@ -485,7 +652,8 @@ function grid() {
     const r = rows[i]; let j = i + 1;
     while (j < rows.length && rows[j].date === r.date && rows[j].grp === r.grp) j++;
     const v = r.grp === "low" ? r.low_f : r.grp === "high" ? r.high_f : null;
-    h += `<td class="temp${rows[j - 1].b <= now ? " past" : ""}${dstart(r)}" colspan="${j - i}">${v ?? (r.grp === "rest" ? "" : "–")}</td>`;
+    const tc = r.grp === "low" ? "low_f" : r.grp === "high" ? "high_f" : null, ed = tc && r.edited.has(tc);
+    h += `<td class="temp${rows[j - 1].b <= now ? " past" : ""}${dstart(r)}${ed ? " edited" : ""}" colspan="${j - i}"${tc ? ` data-i="${i}" data-col="${tc}"${state.editMode ? ' tabindex="0"' : ""}` : ""}${ed ? ` title="Edited. Model: ${r.model[tc] ?? "–"}°F"` : ""}>${v ?? (r.grp === "rest" ? "" : "–")}</td>`;
     i = j;
   }
   h += "</tr>";
@@ -494,16 +662,28 @@ function grid() {
     rows.forEach((r, i) => {
       const v = r[R.col], past = r.b <= now ? " past" : "";
       const sel = state.sel && state.sel.i === i && state.sel.col === R.col ? " sel" : "";
-      h += R.v ? `<td class="p ${cls(v)}${past}${sel}${dstart(r)}" data-i="${i}" data-col="${R.col}" tabindex="0">${v == null ? "–" : v + "%"}</td>`
+      const ed = r.edited.has(R.col);
+      h += R.v ? `<td class="p ${cls(v)}${past}${sel}${dstart(r)}${ed ? " edited" : ""}" data-i="${i}" data-col="${R.col}" tabindex="0"${ed ? ` title="Edited. Model: ${r.model[R.col] ?? "–"}%"` : ""}>${v == null ? "–" : v + "%"}</td>`
                : `<td class="na${past}${dstart(r)}">–</td>`;
     });
     h += "</tr>";
   }
   $("#grid").innerHTML = h + "</tbody>";
-  $("#grid").querySelectorAll("td.p").forEach(td => {
+  $("#grid").querySelectorAll("td[data-col]").forEach(td => {
+    const selectable = td.classList.contains("p");
     const pick = () => { state.sel = { i: +td.dataset.i, col: td.dataset.col }; state.cons = ROWS.find(R => R.col === td.dataset.col).v; grid(); detail(); segs(); chart(); };
-    td.addEventListener("click", pick);
-    td.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(); } });
+    td.addEventListener("mousedown", e => {                  // edit mode: commit any open box, then open this one
+      if (!state.editMode) return;
+      e.preventDefault(); const i = +td.dataset.i, c = td.dataset.col;
+      if (state.editor) state.editor(true);
+      openEditor(i, c);
+    });
+    td.addEventListener("click", () => { if (!state.editMode && selectable) pick(); });
+    td.addEventListener("keydown", e => {
+      if (e.target !== td || (e.key !== "Enter" && e.key !== " ")) return;
+      e.preventDefault();
+      if (state.editMode) openEditor(+td.dataset.i, td.dataset.col); else if (selectable) pick();
+    });
   });
   if (!state.scrolled) {
     const t = $("#grid").querySelector("th.today");
@@ -516,7 +696,7 @@ function detail() {
   if (!state.sel) { el.innerHTML = `<h2>Source breakdown</h2><p class="sub">Select a cell in the table to see how each source contributes.</p>`; return; }
   const r = state.rows[state.sel.i], R = ROWS.find(x => x.col === state.sel.col), per = r.per[R.col] || {};
   const [y, m, dd] = r.date.split("-");
-  let h = `<h2>${R.name} ${R.sub}</h2><div class="sub">${+m}/${+dd}, ${r.label}</div><div class="big">${r[R.col] == null ? "–" : r[R.col] + "%"}</div><div class="sub">weighted across ${Object.keys(per).length} sources</div><table class="bysrc">`;
+  let h = `<h2>${R.name} ${R.sub}</h2><div class="sub">${+m}/${+dd}, ${r.label}</div><div class="big">${r[R.col] == null ? "–" : r[R.col] + "%"}</div>${r.edited.has(R.col) ? `<div class="sub"><b>Edited by you.</b> Model: ${r.model[R.col] ?? "–"}%</div>` : ""}<div class="sub">weighted across ${Object.keys(per).length} sources</div><table class="bysrc">`;
   for (const s of d.sources) {
     const p = per[s.id]; if (!p) continue;
     h += `<tr><td>${s.label}</td><td style="width:40%"><div class="bar"><i style="width:${p.p * 100}%;background:${css("--" + s.family)}"></i></div></td><td class="v2">${Math.round(p.p * 100)}% of ${p.n}</td></tr>`;
@@ -621,9 +801,11 @@ function sourceList() {
   famToggles();
 }
 function recompute() {
-  state.rows = windowTable(); sourceList(); grid(); detail(); custom(); chart();
+  state.rows = applyEdits(windowTable()); sourceList(); grid(); detail(); custom(); chart(); editUI();
   const all = state.data.sources.every(s => !s.members.length || state.enabled[s.id]);
-  $("#dlhint").textContent = all ? "All sources are on, so this matches the published CSV." : "Some sources are off; the download reflects your selection. The published CSV always uses every source.";
+  const n = editCount();
+  $("#dlhint").textContent = (all ? "All sources are on, so this matches the published CSV." : "Some sources are off; the download reflects your selection. The published CSV always uses every source.")
+    + (n ? ` Your ${n} edit${n > 1 ? "s are" : " is"} included in the download but not in the published CSV.` : "");
 }
 function header() {
   const d = state.data, st = d.site;
@@ -657,6 +839,7 @@ async function load(first) {
   if (first) {
     const q = new URLSearchParams(location.search).get("layout"), sv = store.get("board.layout");
     state.layout = ["std", "fine"].includes(q) ? q : ["std", "fine"].includes(sv) ? sv : "std";
+    state.edits = loadEdits();
     $("#layout").value = state.layout;
     const hz = k => { const m = location.hash.match(new RegExp(k + "=([\\dT:-]+)Z")); return m ? Date.parse(m[1] + ":00Z") / 1000 : null; };
     let a = hz("start"), b = hz("end");
@@ -676,12 +859,27 @@ $("#cwEnd").addEventListener("change", cwChange);
 $("#cwClear").addEventListener("click", () => { setCustom(null, null); if (state.data) { custom(); chart(); } });
 $("#dl").addEventListener("click", download);
 $("#layout").addEventListener("change", () => {
-  state.layout = $("#layout").value; state.sel = null; state.scrolled = false; store.set("board.layout", state.layout);
+  state.layout = $("#layout").value; state.sel = null; state.editor = null; state.scrolled = false; store.set("board.layout", state.layout);
   const u = new URL(location.href); u.searchParams.set("layout", state.layout); history.replaceState(null, "", u);
   if (state.data) { header(); recompute(); }
 });
 window.boardCSV = () => toCSV(state.rows);   // used by tests and handy in the console
 window.boardSetLayout = l => { state.layout = l; recompute(); return toCSV(state.rows); };
+window.boardEdit = (i, col, text) => { commitEdit(i, col, text); return toCSV(state.rows); };   // used by tests
+window.boardHTML = () => buildHTML();
+$("#editBtn").addEventListener("click", () => {
+  state.editMode = !state.editMode; state.editor = null;
+  $("#editBtn").classList.toggle("on", state.editMode); $("#editBtn").setAttribute("aria-pressed", String(state.editMode));
+  $("#editBtn").textContent = state.editMode ? "Editing: on" : "Edit numbers";
+  if (state.data) { grid(); editUI(); }
+});
+$("#clearEdits").addEventListener("click", () => {
+  if (!confirm(`Remove your ${editCount()} edit(s) in this layout and go back to the model numbers?`)) return;
+  state.edits[state.layout] = {}; saveEdits(); recompute();
+});
+$("#exportHtml").addEventListener("click", exportHTML);
+$("#savePdf").addEventListener("click", savePDF);
+window.boardPDFHTML = () => buildHTML({ pdf: true });
 $("#copy").addEventListener("click", async () => {
   const url = new URL(CSV_URLS[state.layout], location.href).href;
   try { await navigator.clipboard.writeText(url); $("#dlhint").textContent = "Copied: " + url; }
@@ -690,6 +888,7 @@ $("#copy").addEventListener("click", async () => {
 let rt; window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => state.data && chart(), 150); });
 matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => state.data && recompute());
 load(true); setInterval(() => load(false), REFRESH_MS);
+loadGfs(); setInterval(loadGfs, REFRESH_MS);
 })();
 </script>
 </body>

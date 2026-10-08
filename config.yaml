@@ -9,6 +9,29 @@ site:
 windows: [[0, 11], [11, 18], [18, 24]]
 days: 8
 
+# Sky cover comes from NBM only: the first source listed that has data for a block is used
+# (NBM's own GRIB first, Open-Meteo's NBM as the fallback). Add other source ids to blend them in.
+sky_sources: [nbm_tstm, nbm]
+
+# GFS upper-air files for the GFS model-data workbook (the page's "GFS upper air" buttons).
+# BUFKIT: Penn State's sounding, copied unchanged. CSV: Open-Meteo GFS at the point below, built the
+# same way as the workbook's macro. Both are refreshed every refresh_hours and replaced only by a
+# complete download. Set enabled: false on any of them to stop publishing it.
+gfs_upper_air:
+  enabled: true
+  refresh_hours: 3
+  bufkit:
+    enabled: true
+    station: xmr
+    latest: http://www.meteo.psu.edu/bufkit/data/GFS/latest/gfs3_{stn}.buf
+    cycle: http://www.meteo.psu.edu/bufkit/data/GFS/{cyc}/gfs3_{stn}.buf
+  open_meteo_csv:
+    enabled: true
+    name: KTTS
+    lat: 28.64406
+    lon: -80.73782
+    forecast_days: 8
+
 # "Fine" layout (the page's Time blocks dropdown): 3-hour blocks for the first N days,
 # then 6-hour blocks, starting today. High/Low keep the windows[0] / windows[1] definitions.
 fine_layout:
