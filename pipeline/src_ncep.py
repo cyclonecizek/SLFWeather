@@ -26,7 +26,8 @@ def _fmt(tmpl: str, cycle: int, fh: int) -> str:
 
 
 def _point(url: str, cycle: int, ctx: Context) -> dict | None:
-    cached = ctx.cache.get(url)
+    ck = url + "#r2"                     # r2 keeps distances for every radius option; older entries are ignored
+    cached = ctx.cache.get(ck)
     if cached is not None:
         return cached
     try:
@@ -48,7 +49,7 @@ def _point(url: str, cycle: int, ctx: Context) -> dict | None:
         if isinstance(vals.get(k), dict):
             out[k] = {str(int(r)): v for r, v in vals[k].items()}
     if out:
-        ctx.cache.put(url, cycle, out)
+        ctx.cache.put(ck, cycle, out)
     return out
 
 
@@ -66,16 +67,21 @@ def record(p: dict, ctx: Context) -> dict | None:
         rec["rh"] = p["rh"]
     if "t" in p:
         rec["t"] = p["t"]
-    rp = str(int(c["precip_radius_nm"]))
+    opts = [str(int(r)) for r in (ctx.radius_opts or [c["precip_radius_nm"]])]
+    # pd / ld: nearest radius option (nm) at which the field qualifies, 99 if none. With the max within each radius
+    # this is exact for every option, and the page then judges "within R" as pd <= R.
     refl = p.get("refd") or p.get("refc")
-    if refl and refl.get(rp) is not None:
-        rec["p30"] = int(refl[rp] >= c["precip_dbz"])
+    if refl:
+        have = [(int(r), refl[r]) for r in opts if refl.get(r) is not None]
+        if have:
+            hit = [r for r, v in have if v >= c["precip_dbz"]]
+            rec["pd"] = min(hit) if hit else 99
     # Lightning only from models with an explicit lightning field (no reflectivity proxy)
-    r30, r10 = (str(int(r)) for r in c["lightning_radii_nm"])
     if p.get("ltng"):
-        for key, r in (("l30", r30), ("l10", r10)):
-            if p["ltng"].get(r) is not None:
-                rec[key] = int(p["ltng"][r] > c["ltng_threshold"])
+        have = [(int(r), p["ltng"][r]) for r in opts if p["ltng"].get(r) is not None]
+        if have:
+            hit = [r for r, v in have if v > c["ltng_threshold"]]
+            rec["ld"] = min(hit) if hit else 99
     return rec or None
 
 
@@ -158,10 +164,10 @@ _TCDC_EXTRA = re.compile(r"prob|%|std|spread|ens|ave|max|min|acc", re.I)        
 
 def nbm_prob(scfg: dict, ctx: Context) -> SourceResult:
     """NBM probabilities stored as one member of 0-1 values:
-      l30/l10  thunderstorm probability (1, 3 and 6 h periods), highest value within each
-               lightning radius; every hour in a period gets that period's value and keeps
-               the highest overlapping one.
-      vis      probability of visibility below NBM's lowest threshold, at the site.
+      q<R>     thunderstorm probability (1, 3 and 6 h periods), highest value within R nm, for every
+               radius option; every hour in a period gets that period's value and keeps the highest
+               overlapping one.
+      vt<k>    probability of visibility below the k-th NBM threshold (ascending), at the site.
       sky      NBM total cloud cover (%), the plain TCDC field at the site."""
     cands = [c for c in (floor_hour(ctx.now) - k * 3600 for k in range(36))
              if time.gmtime(c).tm_hour in set(scfg.get("cycles", [0, 6, 12, 18]))]
@@ -186,8 +192,7 @@ def nbm_prob(scfg: dict, ctx: Context) -> SourceResult:
             m = _VIS.search(d)
             if m:
                 vis.append((float(m.group(2)), rec))
-        if vis:
-            thr, rec = min(vis, key=lambda x: x[0])
+        for thr, rec in vis:                       # every threshold NBM publishes, not just the lowest
             out.append((f"vis<{thr:g}", rec, "point"))
         if sky:
             out.append(("sky", min(sky, key=lambda x: x[0])[1], "point"))
@@ -195,7 +200,7 @@ def nbm_prob(scfg: dict, ctx: Context) -> SourceResult:
 
     def run(fh):
         url = f"{base}/{_fmt(scfg['file'], cycle, fh)}"
-        key = url + "#nbmp2"                 # v2 adds sky cover; older cached entries are ignored
+        key = url + "#nbmp3"                 # v3 keeps every visibility threshold and every radius; older entries are ignored
         got = ctx.cache.get(key)
         if got is None:
             try:
@@ -218,40 +223,39 @@ def nbm_prob(scfg: dict, ctx: Context) -> SourceResult:
 
     fhs = [fh for fh in range(1, int(scfg.get("max_fh", 192)) + 1) if ctx.in_window(cycle + fh * 3600)]
     series: dict[int, dict] = {}
-    r30, r10 = (str(int(r)) for r in ctx.cons["lightning_radii_nm"])
-    thresholds = set()
+    opts = [int(r) for r in (ctx.radius_opts or [30, 10])]
     with ThreadPoolExecutor(16) as ex:
-        for res in ex.map(run, fhs):
-            if not res:
+        results = [res for res in ex.map(run, fhs) if res]
+    thresholds = sorted({float(k[4:]) for _, got in results for k in got if k.startswith("vis<")})
+    tidx = {f"{x:g}": i for i, x in enumerate(thresholds)}
+    for fh, got in results:
+        for name, vals in got.items():
+            if name == "sky":
+                t = cycle + fh * 3600
+                if ctx.in_window(t):
+                    series.setdefault(t, {})["sky"] = vals
                 continue
-            fh, got = res
-            for name, vals in got.items():
-                if name == "sky":
-                    t = cycle + fh * 3600
-                    if ctx.in_window(t):
-                        series.setdefault(t, {})["sky"] = vals
+            if name.startswith("vis<"):
+                t = cycle + fh * 3600
+                if ctx.in_window(t):
+                    series.setdefault(t, {})[f"vt{tidx[name[4:]]}"] = min(1.0, max(0.0, vals / 100.0))
+                continue
+            a, b = map(int, name[1:].split("-"))
+            for h in range(a + 1, b + 1):
+                t = cycle + h * 3600
+                if not ctx.in_window(t):
                     continue
-                if name.startswith("vis<"):
-                    thresholds.add(name[4:])
-                    t = cycle + fh * 3600
-                    if ctx.in_window(t):
-                        series.setdefault(t, {})["vis"] = min(1.0, max(0.0, vals / 100.0))
-                    continue
-                a, b = map(int, name[1:].split("-"))
-                for h in range(a + 1, b + 1):
-                    t = cycle + h * 3600
-                    if not ctx.in_window(t):
-                        continue
-                    rec = series.setdefault(t, {})
-                    for key, r in (("l30", r30), ("l10", r10)):
-                        v = vals.get(r)
-                        if v is not None:
-                            rec[key] = max(rec.get(key, 0.0), min(1.0, max(0.0, v / 100.0)))
+                rec = series.setdefault(t, {})
+                for r in opts:
+                    v = vals.get(str(r))
+                    if v is not None:
+                        rec[f"q{r}"] = max(rec.get(f"q{r}", 0.0), min(1.0, max(0.0, v / 100.0)))
     series = {t: r for t, r in series.items() if r}
+    ctx.vis_thresholds = thresholds
     if thresholds:
-        ctx.vis_thr_m = min(float(x) for x in thresholds)   # shared with other visibility sources
-    ctx.vis_hours = {t for t, r in series.items() if "vis" in r}
-    vis_note = f"; visibility below {', '.join(sorted(thresholds))} m" if thresholds else "; no visibility probability found"
+        ctx.vis_thr_m = thresholds[0]                       # lowest threshold: the default, shared with other visibility sources
+    ctx.vis_hours = {t for t, r in series.items() if "vt0" in r}
+    vis_note = f"; visibility below {', '.join(f'{x:g}' for x in thresholds)} m" if thresholds else "; no visibility probability found"
     return SourceResult({"m00": series} if series else {}, cycle=iso(cycle),
                         note="thunder probability, highest within each radius" + vis_note + ("; sky cover" if any("sky" in r for r in series.values()) else "; no sky cover found"),
                         status="ok" if series else "missing")

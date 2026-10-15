@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import argparse
+import re
 import json
 import logging
 import os
@@ -24,17 +25,23 @@ KINDS = {
     "openmeteo_det": src_web.openmeteo_det,
     "nws_grid": src_web.nws_grid,
 }
-VARS = ("spd", "dir", "gst", "rh", "t", "sky", "p30", "l30", "l10", "vis")
+# Stored per member-hour. pd / ld are the nearest distance (nm, 99 = none) at which precipitation / lightning occurs,
+# q<R> is NBM thunder probability within R nm, vt<k> is NBM visibility probability below the k-th threshold and
+# vism is raw visibility in metres; the page and windows.py turn them into p30 / l30 / l10 / vis for the chosen limits.
+VARS = ("spd", "dir", "gst", "rh", "t", "sky", "pd", "ld", "vism", "p30", "l30", "l10", "vis")
+_DYN = re.compile(r"^(q\d+|vt\d+)$")
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 def _round(var, x):
     if x is None:
         return None
-    if var == "p30":
+    if var in ("p30", "pd", "ld"):
         return int(x)
-    if var in ("l30", "l10", "vis"):
-        return round(float(x), 2)       # 0/1 from lightning fields, 0-1 from NBM probabilities
+    if var == "vism":
+        return int(round(x))
+    if var in ("l30", "l10", "vis") or _DYN.match(var):
+        return round(float(x), 2)       # 0-1 probabilities
     if var == "dir":
         return round(x) % 360
     return round(x, 1)
@@ -48,13 +55,14 @@ def build(cfg: dict, only: set | None = None) -> dict:
     timeline = list(range(t_start, t_end + 1, 3600))
     idx = {t: i for i, t in enumerate(timeline)}
     cons = cfg["constraints"]
-    radii = sorted({float(cons["precip_radius_nm"]), *map(float, cons["lightning_radii_nm"])})
+    opts = tuple(sorted({float(r) for r in cons.get("radius_options_nm", [])} | {float(cons["precip_radius_nm"]), *map(float, cons["lightning_radii_nm"])}))
+    radii = list(opts)
 
     cache = PointCache(os.path.join(ROOT, "cache", "points.json"))
     cache.prune(now - 4 * 86400)
     sky_ids = tuple(cfg.get("sky_sources") or ["nbm_tstm", "nbm"])
     ctx = Context(now=now, lat=float(cfg["site"]["lat"]), lon=float(cfg["site"]["lon"]), sky_ids=sky_ids,
-                  t_start=t_start, t_end=t_end, cache=cache, cons=cons, radii=radii, root=ROOT,
+                  t_start=t_start, t_end=t_end, cache=cache, cons=cons, radii=radii, root=ROOT, radius_opts=opts,
                   om_refresh_h=float(cfg.get("openmeteo_refresh_hours", 3)))
 
     sources = []
@@ -74,9 +82,9 @@ def build(cfg: dict, only: set | None = None) -> dict:
                 i = idx.get(int(t))
                 if i is None:
                     continue
-                for k in VARS:
-                    if k in rec and (k != "sky" or scfg["id"] in sky_ids):
-                        v[k][i] = _round(k, rec[k])
+                for k, val in rec.items():
+                    if (k in VARS or _DYN.match(k)) and (k != "sky" or scfg["id"] in sky_ids):
+                        v.setdefault(k, [None] * len(timeline))[i] = _round(k, val)
             v = {k: a for k, a in v.items() if any(x is not None for x in a)}
             if v:
                 members.append({"id": mid, "v": v})
@@ -92,6 +100,9 @@ def build(cfg: dict, only: set | None = None) -> dict:
             "windows": cfg["windows"], "days": days,
             "min_window_coverage": cfg.get("min_window_coverage", 0.5),
             "fine_layout": cfg.get("fine_layout"), "sky_sources": list(sky_ids),
+            "radius_options_nm": [int(r) for r in opts if r in {float(x) for x in cons.get("radius_options_nm", [])}],
+            "vis_thresholds_m": list(ctx.vis_thresholds),
+            "vis_default_m": ctx.vis_thr_m or float(cons.get("vis_fallback_m", 400)),
             "times": timeline, "sources": sources}
 
 

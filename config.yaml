@@ -52,6 +52,10 @@ constraints:
   rh_pct: 98                  # 2 m RH above this
   precip_radius_nm: 30
   lightning_radii_nm: [30, 10]
+  # Radii (nm) the page's "Constraint limits" panel can switch precipitation and lightning between.
+  # The sources keep the nearest distance at which each occurs, so any of these is exact. Open-Meteo
+  # sources sample the site and rings at 10 and 25 nm, so for them a radius over 25 nm adds nothing.
+  radius_options_nm: [5, 10, 15, 20, 25, 30]
   # Hi-res GRIB models: precip = 1 km reflectivity >= this anywhere in the radius
   precip_dbz: 20
   # Lightning comes only from explicit lightning output: hi-res LTNG (flashes/km2/5 min)

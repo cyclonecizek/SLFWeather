@@ -109,6 +109,25 @@ Each is refreshed every `refresh_hours` (default 3) and replaced only by a compl
 fetch keeps the previous file (the page says so). The files change about four times a day, so the repository
 grows slowly; set `enabled: false` under `gfs_upper_air` (or under either product) to stop publishing.
 
+## Constraint limits
+
+The **Constraint limits** panel at the top of the page changes the limits the table is judged against:
+crosswind, head/tailwind and relative humidity (numbers), the radius for precipitation, lightning and
+lightning potential (5-30 nm), and the visibility threshold (the thresholds NBM publishes; "Standard" keeps the
+200 ft product label and NBM's lowest threshold). Row labels, the table, the breakdown, the chart, the
+CSV download, Export HTML and Save as PDF all follow your choice; a "custom" badge shows when any limit differs, and
+the CSV is named `..._custom.csv`. Choices are kept in the browser. The published CSVs always use the standard limits.
+
+How it works: the wind and humidity limits are applied to each model's own gust, direction and humidity. For the
+rest the hourly run stores more than a yes/no answer: the nearest distance (nm, 99 = none) at which each source saw
+precipitation (`pd`) or lightning (`ld`), NBM's thunder probability at every radius (`q<R>`), NBM's visibility
+probability at every threshold (`vt<k>`) and ECMWF HRES visibility in metres (`vism`). `pipeline/limits.py` and the
+page's `deriveLimits` turn those into the numbers for the chosen limits, and must stay in step. The radii on offer
+are `radius_options_nm` in `config.yaml`. Open-Meteo sources sample the site plus rings at 10 and 25 nm, so for
+them a radius above 25 nm adds nothing. The Excel workbook's row labels are fixed text, so relabel them when you
+import a custom file. Until the first run after this change, the page works with the old data: only the wind and
+humidity limits are available.
+
 ## Change limits or sources
 
 `config.yaml`: site, runway, limits, radii, thresholds, window times, source

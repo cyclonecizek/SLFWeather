@@ -77,7 +77,8 @@ def _vis_m(x, unit):
 
 def _members(locs, pts, ctx):
     c = ctx.cons
-    near30 = [i for i, p in enumerate(pts) if p[2] <= c["precip_radius_nm"]]
+    reach = max(list(ctx.radius_opts) + [c["precip_radius_nm"]])      # farthest radius the page can ask for
+    near = [i for i, p in enumerate(pts) if p[2] <= reach]
     times = locs[0]["hourly"]["time"]
     vis_unit = locs[0].get("hourly_units", {}).get("visibility", "m")
     per: dict[str, dict] = {}                  # member -> var -> [loc arrays]
@@ -113,8 +114,10 @@ def _members(locs, pts, ctx):
             if at(f, "cloud_cover", 0, i) is not None:
                 rec["sky"] = at(f, "cloud_cover", 0, i)
             pr = [at(f, "precipitation", li, i) for li in range(len(pts))]
-            if any(pr[li] is not None for li in near30):
-                rec["p30"] = int(any(pr[li] is not None and pr[li] >= c["precip_in"] for li in near30))
+            have = [(pts[li][2], pr[li]) for li in near if pr[li] is not None]
+            if have:                                  # nearest sampled point with precipitation (99 = none)
+                hit = [dist for dist, v in have if v >= c["precip_in"]]
+                rec["pd"] = int(min(hit)) if hit else 99
             # no lightning here: these models have no explicit lightning parameter
             vm = _vis_m(at(f, "visibility", 0, i), vis_unit)
             if vm is not None:
@@ -149,10 +152,12 @@ def _cached(scfg, ctx, url):
 
 
 def _finish(mem, scfg, ctx):
-    """Turn raw visibility into 1/0 below NBM's lowest threshold, and keep only the
-    rows this source is meant to feed (config "only")."""
+    """Keep raw visibility (the page and windows.py judge it against the chosen threshold, by default NBM's
+    lowest), and keep only the rows this source is meant to feed (config "only")."""
     thr = ctx.vis_thr_m or float(ctx.cons.get("vis_fallback_m", 400))
     only = set(scfg.get("only", []))
+    alias = {"p30": {"pd"}, "l30": {"ld"}, "l10": {"ld"}, "vis": {"vism"}}   # "only" uses the row names
+    only |= set().union(*(alias.get(k, set()) for k in only)) if only else set()
     # A single deterministic run on its own would give 0% or 100%, so by default it
     # only counts in hours where NBM's visibility probability also exists.
     limit = scfg.get("within_nbm_range", True) and bool(ctx.vis_hours)
@@ -161,10 +166,8 @@ def _finish(mem, scfg, ctx):
         s2 = {}
         for t, rec in series.items():
             rec = dict(rec)
-            if "vism" in rec:
-                vm = rec.pop("vism")
-                if not limit or int(t) in ctx.vis_hours:
-                    rec["vis"] = int(vm < thr)
+            if "vism" in rec and limit and int(t) not in ctx.vis_hours:
+                rec.pop("vism")
             if only:
                 rec = {k: v for k, v in rec.items() if k in only}
             if rec:

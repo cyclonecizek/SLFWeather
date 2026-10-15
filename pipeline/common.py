@@ -171,6 +171,8 @@ class Context:
     target_m: float = 10.0
     alpha: float = 0.14
     sky_ids: tuple = ()           # source ids that supply sky cover (config sky_sources)
+    radius_opts: tuple = ()       # radii (nm) the page can switch between for precipitation / lightning
+    vis_thresholds: list = field(default_factory=list)   # every NBM visibility threshold found (m), ascending
 
     def in_window(self, t: int) -> bool:
         return self.t_start <= t <= self.t_end

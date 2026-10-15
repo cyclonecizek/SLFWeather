@@ -28,6 +28,8 @@ import math
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
+from . import limits as limits_mod
+
 PROB_COLS = [("precip30", "p30"), ("ltng30", "l30"), ("ltng10", "l10"),
              ("xwind", "xw"), ("headtail", "ht"), ("vis200", "vis"), ("rh98", "rhx")]
 HEADER = ["key", "local_date", "window", "window_label", "local_start", "precip30", "ltng30", "ltng10",
@@ -145,8 +147,8 @@ def _wmedian(pairs):
     return pairs[-1][0]
 
 
-def table(data: dict, cfg: dict, enabled: set | None = None, layout: str = "std") -> list[dict]:
-    cons = cfg["constraints"]
+def table(data: dict, cfg: dict, enabled: set | None = None, layout: str = "std", limits: dict | None = None) -> list[dict]:
+    data, cons = limits_mod.derive(data, cfg["constraints"], limits)
     rwy = float(cfg["runway_heading_true"])
     cov = float(cfg.get("min_window_coverage", 0.5))
     times = data["times"]
