@@ -2,9 +2,9 @@
  "bufkit": {
   "station": "XMR",
   "file": "gfs3_xmr.buf",
-  "run": "2026-10-16T00:00Z",
-  "fetched": "2026-10-16T07:23Z",
-  "fetched_unix": 1792135432,
+  "run": "2026-10-16T06:00Z",
+  "fetched": "2026-10-16T12:38Z",
+  "fetched_unix": 1792154321,
   "ok": true,
   "error": null,
   "available": true
@@ -15,9 +15,10 @@
   "run": "2026-10-16T00:00Z",
   "fetched": "2026-10-16T07:23Z",
   "fetched_unix": 1792135432,
-  "ok": true,
-  "error": null,
-  "available": true
+  "ok": false,
+  "error": "HTTPSConnectionPool(host='api.open-meteo.com', port=443): Max retries exceeded with url: /v1/gfs?latitude=28.64406&longitude=-80.73782&models=gfs_global&forecast_days=8&wind_speed_unit=kn&cell_selection=nearest&format=csv&hourly=geopotential_height_400hPa,temperature_350hPa,relative_humidity_350hPa,",
+  "available": true,
+  "last_try": "2026-10-16T12:38Z"
  },
- "generated": "2026-10-16T07:23Z"
+ "generated": "2026-10-16T12:38Z"
 }
