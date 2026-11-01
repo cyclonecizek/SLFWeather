@@ -3,8 +3,8 @@
   "station": "XMR",
   "file": "gfs3_xmr.buf",
   "run": "2026-10-31T12:00Z",
-  "fetched": "2026-10-31T22:39Z",
-  "fetched_unix": 1793486393,
+  "fetched": "2026-11-01T02:24Z",
+  "fetched_unix": 1793499846,
   "ok": true,
   "error": null,
   "available": true
@@ -12,12 +12,12 @@
  "csv": {
   "site": "KTTS",
   "file": "GFS_upper_air_KTTS.csv",
-  "run": "2026-10-31T00:00Z",
-  "fetched": "2026-10-31T22:39Z",
-  "fetched_unix": 1793486393,
+  "run": "2026-11-01T00:00Z",
+  "fetched": "2026-11-01T02:24Z",
+  "fetched_unix": 1793499846,
   "ok": true,
   "error": null,
   "available": true
  },
- "generated": "2026-10-31T22:39Z"
+ "generated": "2026-11-01T02:24Z"
 }
