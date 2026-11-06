@@ -2,9 +2,9 @@
  "bufkit": {
   "station": "XMR",
   "file": "gfs3_xmr.buf",
-  "run": "2026-11-06T06:00Z",
-  "fetched": "2026-11-06T16:04Z",
-  "fetched_unix": 1793981049,
+  "run": "2026-11-06T12:00Z",
+  "fetched": "2026-11-06T21:40Z",
+  "fetched_unix": 1794001259,
   "ok": true,
   "error": null,
   "available": true
@@ -13,11 +13,11 @@
   "site": "KTTS",
   "file": "GFS_upper_air_KTTS.csv",
   "run": "2026-11-06T00:00Z",
-  "fetched": "2026-11-06T16:04Z",
-  "fetched_unix": 1793981049,
+  "fetched": "2026-11-06T21:40Z",
+  "fetched_unix": 1794001259,
   "ok": true,
   "error": null,
   "available": true
  },
- "generated": "2026-11-06T16:04Z"
+ "generated": "2026-11-06T21:40Z"
 }
