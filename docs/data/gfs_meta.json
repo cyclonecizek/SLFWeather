@@ -5,19 +5,20 @@
   "run": "2026-11-19T06:00Z",
   "fetched": "2026-11-19T12:00Z",
   "fetched_unix": 1795089634,
-  "ok": true,
-  "error": null,
-  "available": true
+  "ok": false,
+  "error": "latest link: HTTPConnectionPool(host='www.meteo.psu.edu', port=80): Max retries exceeded with url: /bufkit/data/GFS/latest/gfs3_xmr.buf (Caused by NewConnectionError(\"HTTPConnection(host='www.meteo.psu.edu', port=80): Failed to establish a new connection: [Errno 111] Connection refused\")); 00Z folde",
+  "available": true,
+  "last_try": "2026-11-20T02:27Z"
  },
  "csv": {
   "site": "KTTS",
   "file": "GFS_upper_air_KTTS.csv",
-  "run": "2026-11-19T00:00Z",
-  "fetched": "2026-11-19T12:00Z",
-  "fetched_unix": 1795089634,
+  "run": "2026-11-20T00:00Z",
+  "fetched": "2026-11-20T02:27Z",
+  "fetched_unix": 1795141678,
   "ok": true,
   "error": null,
   "available": true
  },
- "generated": "2026-11-19T12:00Z"
+ "generated": "2026-11-20T02:27Z"
 }
